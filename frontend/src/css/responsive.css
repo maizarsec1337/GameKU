@@ -1,0 +1,276 @@
+/* ====================
+   RESPONSIVE
+   ==================== */
+
+/* Extra Large Devices (1200px and up) */
+@media (max-width: 1200px) {
+  .container {
+    max-width: 960px;
+  }
+
+  .grid-6 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Large Devices (992px and down) */
+@media (max-width: 992px) {
+  .container {
+    max-width: 720px;
+  }
+
+  .grid-5, .grid-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .section {
+    padding: var(--space-2xl) 0;
+  }
+
+  .section-title {
+    font-size: var(--font-2xl);
+  }
+
+  /* NAVBAR */
+  .navbar-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--dark-2);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-lg);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    flex-direction: column;
+    gap: var(--space-md);
+    border: 1px solid var(--dark-3);
+  }
+
+  .navbar-menu.active {
+    display: flex;
+  }
+
+  .navbar-menu a {
+    padding: var(--space-sm) 0;
+    width: 100%;
+  }
+
+  .navbar-hamburger {
+    display: flex;
+  }
+
+  .navbar-actions {
+    gap: var(--space-sm);
+  }
+
+  /* HERO */
+  .hero {
+    padding: var(--space-3xl) 0;
+  }
+
+  .hero-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-size: var(--font-3xl);
+  }
+
+  .hero-image {
+    display: none;
+  }
+
+  /* FEATURES */
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* FOOTER */
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Medium Devices (768px and down) */
+@media (max-width: 768px) {
+  .container {
+    max-width: 540px;
+  }
+
+  .grid-3, .grid-4, .grid-5, .grid-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .section {
+    padding: var(--space-xl) 0;
+  }
+
+  .section-title {
+    font-size: var(--font-xl);
+  }
+
+  .section-subtitle {
+    font-size: var(--font-sm);
+  }
+
+  /* HERO */
+  .hero {
+    padding: var(--space-2xl) 0;
+  }
+
+  .hero h1 {
+    font-size: var(--font-2xl);
+  }
+
+  .hero p {
+    font-size: var(--font-sm);
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-search {
+    flex-direction: column;
+    padding: var(--space-md);
+  }
+
+  .hero-search input {
+    padding: 12px var(--space-md);
+  }
+
+  /* FEATURES */
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-card {
+    padding: var(--space-lg);
+  }
+
+  /* PROMO */
+  .promo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* FLASH SALE */
+  .flashsale-header {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-md);
+  }
+
+  .countdown {
+    justify-content: center;
+  }
+
+  /* NEWSLETTER */
+  .newsletter {
+    padding: var(--space-xl);
+  }
+
+  .newsletter h2 {
+    font-size: var(--font-2xl);
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+  }
+
+  .newsletter-form input {
+    border-radius: var(--radius-md);
+  }
+
+  .newsletter-form button {
+    border-radius: var(--radius-md);
+  }
+
+  /* FOOTER */
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-md);
+  }
+}
+
+/* Small Devices (480px and down) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+
+  .grid-3, .grid-4, .grid-5, .grid-6 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .btn-lg {
+    padding: 12px 24px;
+    font-size: var(--font-sm);
+  }
+
+  /* NAVBAR */
+  .navbar {
+    padding: var(--space-sm) 0;
+  }
+
+  .navbar-logo img {
+    height: 30px;
+  }
+
+  .navbar-actions .btn span {
+    display: none;
+  }
+
+  /* HERO */
+  .hero h1 {
+    font-size: var(--font-xl);
+  }
+
+  .hero p {
+    font-size: var(--font-sm);
+  }
+
+  /* CARD */
+  .card-body {
+    padding: var(--space-sm);
+  }
+
+  .card-title {
+    font-size: var(--font-xs);
+  }
+
+  .card-price {
+    font-size: var(--font-sm);
+  }
+
+  /* SECTION */
+  .section-header {
+    margin-bottom: var(--space-lg);
+  }
+
+  /* PAGE PLACEHOLDER */
+  .page-placeholder {
+    padding: var(--space-lg);
+  }
+
+  .page-placeholder h1 {
+    font-size: var(--font-2xl);
+  }
+}
