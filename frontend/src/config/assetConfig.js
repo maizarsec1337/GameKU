@@ -9,12 +9,24 @@ const assets = {
       height: 40
     },
     icon: {
-      file: '/src/gambar/logo/icon.png',
+      file: '/src/gambar/logo/Glogo.png',
       title: 'Gameku Icon',
       alt: 'Gameku Icon',
       category: 'logo',
       width: 32,
       height: 32
+    }
+  },
+
+  // Fallback image for all product cards
+  fallback: {
+    product: {
+      file: '/src/gambar/logo/Gcard.png',
+      title: 'Product Fallback',
+      alt: 'Default Product Image',
+      category: 'fallback',
+      width: 200,
+      height: 200
     }
   },
 
@@ -77,7 +89,7 @@ const assets = {
       height: 200
     },
     ff: {
-      file: '/src/gambar/game/ff.png',
+      file: '/src/gambar/game/free-fire.png',
       title: 'Free Fire',
       alt: 'Free Fire',
       category: 'game',
@@ -86,7 +98,7 @@ const assets = {
       height: 200
     },
     pubg: {
-      file: '/src/gambar/game/pubg.png',
+      file: '/src/gambar/game/pubg.webp',
       title: 'PUBG Mobile',
       alt: 'PUBG Mobile',
       category: 'game',
@@ -95,7 +107,7 @@ const assets = {
       height: 200
     },
     genshin: {
-      file: '/src/gambar/game/genshin.png',
+      file: '/src/gambar/game/genshin.jpeg',
       title: 'Genshin Impact',
       alt: 'Genshin Impact',
       category: 'game',
@@ -113,7 +125,7 @@ const assets = {
       height: 200
     },
     fifa: {
-      file: '/src/gambar/game/fifa.png',
+      file: '/src/gambar/game/efootbal.webp',
       title: 'FIFA Mobile',
       alt: 'FIFA Mobile',
       category: 'game',
@@ -122,7 +134,7 @@ const assets = {
       height: 200
     },
     cod: {
-      file: '/src/gambar/game/cod.png',
+      file: '/src/gambar/game/codm.jpeg',
       title: 'Call of Duty Mobile',
       alt: 'Call of Duty Mobile',
       category: 'game',
@@ -131,11 +143,29 @@ const assets = {
       height: 200
     },
     lol: {
-      file: '/src/gambar/game/lol.png',
+      file: '/src/gambar/game/lol.jpeg',
       title: 'League of Legends',
       alt: 'League of Legends Wild Rift',
       category: 'game',
       description: 'Top Up League of Legends',
+      width: 200,
+      height: 200
+    },
+    playstation: {
+      file: '/src/gambar/game/playstation.jpeg',
+      title: 'PlayStation',
+      alt: 'PlayStation Network',
+      category: 'game',
+      description: 'PlayStation Store',
+      width: 200,
+      height: 200
+    },
+    xbox: {
+      file: '/src/gambar/game/xbox.png',
+      title: 'Xbox',
+      alt: 'Xbox Live',
+      category: 'game',
+      description: 'Xbox Gift Card',
       width: 200,
       height: 200
     }
@@ -182,7 +212,7 @@ const assets = {
 
   steam: {
     wallet: {
-      file: '/src/gambar/steam/steamwallet.png',
+      file: '/src/gambar/steam/steam.jpeg',
       title: 'Steam Wallet',
       alt: 'Steam Wallet',
       category: 'steam',
@@ -191,7 +221,7 @@ const assets = {
       height: 200
     },
     giftcard: {
-      file: '/src/gambar/steam/giftcard.png',
+      file: '/src/gambar/giftcard/youtube.png',
       title: 'Steam Gift Card',
       alt: 'Steam Gift Card',
       category: 'steam',
@@ -284,7 +314,7 @@ const assets = {
 
   icon: {
     cart: {
-      file: '/src/gambar/icon/cart.svg',
+      file: '/src/gambar/icon/cart.png',
       title: 'Cart',
       alt: 'Cart Icon',
       category: 'icon',
@@ -292,7 +322,7 @@ const assets = {
       height: 24
     },
     search: {
-      file: '/src/gambar/icon/search.svg',
+      file: '/src/gambar/icon/search.png',
       title: 'Search',
       alt: 'Search Icon',
       category: 'icon',
@@ -300,7 +330,7 @@ const assets = {
       height: 24
     },
     user: {
-      file: '/src/gambar/icon/user.svg',
+      file: '/src/gambar/icon/user.png',
       title: 'User',
       alt: 'User Icon',
       category: 'icon',
@@ -308,7 +338,7 @@ const assets = {
       height: 24
     },
     discount: {
-      file: '/src/gambar/icon/discount.svg',
+      file: '/src/gambar/icon/discount.png',
       title: 'Discount',
       alt: 'Discount Icon',
       category: 'icon',
@@ -316,7 +346,7 @@ const assets = {
       height: 24
     },
     shield: {
-      file: '/src/gambar/icon/shield.svg',
+      file: '/src/gambar/icon/shield.png',
       title: 'Shield',
       alt: 'Shield Icon',
       category: 'icon',
@@ -324,7 +354,7 @@ const assets = {
       height: 24
     },
     delivery: {
-      file: '/src/gambar/icon/delivery.svg',
+      file: '/src/gambar/icon/delivery.png',
       title: 'Delivery',
       alt: 'Delivery Icon',
       category: 'icon',
@@ -332,7 +362,7 @@ const assets = {
       height: 24
     },
     support: {
-      file: '/src/gambar/icon/support.svg',
+      file: '/src/gambar/icon/support.png',
       title: 'Support',
       alt: 'Support Icon',
       category: 'icon',

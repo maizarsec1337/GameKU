@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import assets from '../config/assetConfig';
-import '../css/home.css';
+import ProductCard from '../components/ProductCard';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 // ====================
 // DUMMY DATA
@@ -21,41 +22,37 @@ const dummyGames = [
   { id: 5, name: 'Valorant', image: assets.game.valorant.file, price: 'Rp30.000', category: 'Top Up' },
   { id: 6, name: 'FIFA Mobile', image: assets.game.fifa.file, price: 'Rp12.000', category: 'Top Up' },
   { id: 7, name: 'Call of Duty Mobile', image: assets.game.cod.file, price: 'Rp18.000', category: 'Top Up' },
-  { id: 8, name: 'League of Legends', image: assets.game.lol.file, price: 'Rp22.000', category: 'Top Up' }
+  { id: 8, name: 'League of Legends', image: assets.game.lol.file, price: 'Rp22.000', category: 'Top Up' },
+  { id: 9, name: 'Steam Wallet', image: assets.steam.wallet.file, price: 'Rp20.000', category: 'Steam' },
+  { id: 10, name: 'PlayStation Plus', image: assets.game.playstation.file, price: 'Rp120.000', category: 'Voucher' }
 ];
 
 const dummyVouchers = [
-  { id: 1, name: 'Google Play', image: assets.voucher.googleplay.file, price: 'Rp20.000 - Rp500.000', category: 'Voucher' },
-  { id: 2, name: 'PlayStation', image: assets.voucher.playstation.file, price: 'Rp50.000 - Rp1.000.000', category: 'Voucher' },
-  { id: 3, name: 'Xbox', image: assets.voucher.xbox.file, price: 'Rp30.000 - Rp750.000', category: 'Voucher' },
-  { id: 4, name: 'Nintendo', image: assets.voucher.nintendo.file, price: 'Rp25.000 - Rp600.000', category: 'Voucher' }
+  { id: 101, name: 'Google Play', image: assets.voucher.googleplay.file, price: 'Rp20.000 - Rp500.000', category: 'Voucher' },
+  { id: 102, name: 'PlayStation', image: assets.voucher.playstation.file, price: 'Rp50.000 - Rp1.000.000', category: 'Voucher' },
+  { id: 103, name: 'Xbox', image: assets.voucher.xbox.file, price: 'Rp30.000 - Rp750.000', category: 'Voucher' },
+  { id: 104, name: 'Nintendo', image: assets.voucher.nintendo.file, price: 'Rp25.000 - Rp600.000', category: 'Voucher' }
 ];
 
 const dummySteam = [
-  { id: 1, name: 'Steam Wallet Rp20.000', image: assets.steam.wallet.file, price: 'Rp20.000', category: 'Steam' },
-  { id: 2, name: 'Steam Wallet Rp50.000', image: assets.steam.wallet.file, price: 'Rp50.000', category: 'Steam' },
-  { id: 3, name: 'Steam Wallet Rp100.000', image: assets.steam.wallet.file, price: 'Rp100.000', category: 'Steam' },
-  { id: 4, name: 'Steam Gift Card', image: assets.steam.giftcard.file, price: 'Rp75.000', category: 'Steam' }
+  { id: 201, name: 'Steam Wallet Rp20.000', image: assets.steam.wallet.file, price: 'Rp20.000', category: 'Steam' },
+  { id: 202, name: 'Steam Wallet Rp50.000', image: assets.steam.wallet.file, price: 'Rp50.000', category: 'Steam' },
+  { id: 203, name: 'Steam Wallet Rp100.000', image: assets.steam.wallet.file, price: 'Rp100.000', category: 'Steam' },
+  { id: 204, name: 'Steam Gift Card', image: assets.steam.giftcard.file, price: 'Rp75.000', category: 'Steam' }
 ];
 
 const dummyGiftcards = [
-  { id: 1, name: 'Apple iTunes', image: assets.giftcard.itunes.file, price: 'Rp50.000', category: 'Gift Card' },
-  { id: 2, name: 'Spotify Premium', image: assets.giftcard.spotify.file, price: 'Rp30.000', category: 'Gift Card' },
-  { id: 3, name: 'Netflix', image: assets.giftcard.netflix.file, price: 'Rp100.000', category: 'Gift Card' },
-  { id: 4, name: 'YouTube Premium', image: assets.giftcard.youtube.file, price: 'Rp35.000', category: 'Gift Card' }
+  { id: 301, name: 'Apple iTunes', image: assets.giftcard.itunes.file, price: 'Rp50.000', category: 'Gift Card' },
+  { id: 302, name: 'Spotify Premium', image: assets.giftcard.spotify.file, price: 'Rp30.000', category: 'Gift Card' },
+  { id: 303, name: 'Netflix', image: assets.giftcard.netflix.file, price: 'Rp100.000', category: 'Gift Card' },
+  { id: 304, name: 'YouTube Premium', image: assets.giftcard.youtube.file, price: 'Rp35.000', category: 'Gift Card' }
 ];
 
 const dummyFlashSales = [
-  { id: 1, name: 'MLBB 100 Diamonds', image: assets.game.mlbb.file, price: 'Rp15.000', originalPrice: 'Rp25.000', discount: 40 },
-  { id: 2, name: 'FF 100 Diamonds', image: assets.game.ff.file, price: 'Rp10.000', originalPrice: 'Rp18.000', discount: 44 },
-  { id: 3, name: 'PUBG 150 UC', image: assets.game.pubg.file, price: 'Rp20.000', originalPrice: 'Rp35.000', discount: 43 },
-  { id: 4, name: 'Genshin 60 Primogems', image: assets.game.genshin.file, price: 'Rp25.000', originalPrice: 'Rp40.000', discount: 37 }
-];
-
-const dummyTestimonials = [
-  { id: 1, name: 'Andi Pratama', role: 'Gamer', text: 'Pelayanan cepat dan terpercaya. Top up MLBB langsung masuk dalam hitungan detik. Sangat recommended!', initial: 'A' },
-  { id: 2, name: 'Siti Rahma', role: 'Streamer', text: 'Harga termurah dibanding toko lain. Steam Wallet selalu ready. Langganan tetap di sini.', initial: 'S' },
-  { id: 3, name: 'Budi Santoso', role: 'Kolektor', text: 'Gift Card lengkap dari semua platform. Pengiriman instan, customer service responsif.', initial: 'B' }
+  { id: 401, name: 'MLBB 100 Diamonds', image: assets.game.mlbb.file, price: 'Rp15.000', originalPrice: 'Rp25.000', discount: 40 },
+  { id: 402, name: 'FF 100 Diamonds', image: assets.game.ff.file, price: 'Rp10.000', originalPrice: 'Rp18.000', discount: 44 },
+  { id: 403, name: 'PUBG 150 UC', image: assets.game.pubg.file, price: 'Rp20.000', originalPrice: 'Rp35.000', discount: 43 },
+  { id: 404, name: 'Genshin 60 Primogems', image: assets.game.genshin.file, price: 'Rp25.000', originalPrice: 'Rp40.000', discount: 37 }
 ];
 
 const dummyCategories = [
@@ -69,51 +66,40 @@ const dummyCategories = [
   { name: 'Entertainment', icon: '🎬', count: '15+ Produk', slug: 'entertainment' }
 ];
 
-const dummyBrands = ['Nintendo', 'PlayStation', 'Xbox', 'Steam', 'Google', 'Apple', 'Spotify', 'Netflix', 'Riot Games', 'Moonton', 'Garena', 'Tencent'];
-
 function Home() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 12,
-    minutes: 30,
-    seconds: 0
-  });
+  const carouselRefs = {
+    games: useRef(null),
+    steam: useRef(null),
+    giftcard: useRef(null),
+    voucher: useRef(null),
+    topup: useRef(null),
+    moregames: useRef(null),
+    banner: useRef(null)
+  };
 
-  // ====================
-  // COUNTDOWN TIMER
-  // ====================
+  // State untuk mode "Lihat Semua" (carousel <-> grid) per section
+  const [expandedSections, setExpandedSections] = useState({});
+  const [closingSections, setClosingSections] = useState({});
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        }
-        if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        }
-        if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return { hours: 12, minutes: 0, seconds: 0 };
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
+  const toggleSection = (key) => {
+    if (expandedSections[key]) {
+      // Menutup: animasi halus lalu kembalikan ke carousel
+      setClosingSections((prev) => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setClosingSections((prev) => ({ ...prev, [key]: false }));
+        setExpandedSections((prev) => ({ ...prev, [key]: false }));
+      }, 320);
+    } else {
+      // Membuka: langsung tampilkan semua card dalam grid
+      setExpandedSections((prev) => ({ ...prev, [key]: true }));
+    }
+  };
 
   // ====================
   // HANDLERS
   // ====================
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -121,6 +107,29 @@ function Home() {
 
   const closeMenu = () => {
     setMenuOpen(false);
+  };
+
+  const scrollCarousel = (refName, direction) => {
+    const ref = carouselRefs[refName];
+    if (ref && ref.current) {
+      if (refName === 'banner') {
+        // For banner carousel, scroll by slide width
+        const slide = ref.current.querySelector('.banner-slide');
+        if (slide) {
+          const slideWidth = slide.offsetWidth;
+          const gap = 8;
+          ref.current.scrollBy({ left: direction * (slideWidth + gap), behavior: 'smooth' });
+        }
+      } else {
+        // For product carousel, scroll by card width
+        const card = ref.current.querySelector('.product-card');
+        if (card) {
+          const cardWidth = card.offsetWidth;
+          const gap = 8;
+          ref.current.scrollBy({ left: direction * (cardWidth + gap), behavior: 'smooth' });
+        }
+      }
+    }
   };
 
   // ====================
@@ -148,7 +157,7 @@ function Home() {
           <button className="btn-icon" aria-label="Search" onClick={() => navigate('/search')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="21" y1="21" x1="16.65" y2="16.65" />
             </svg>
           </button>
 
@@ -188,10 +197,10 @@ function Home() {
   const renderBanner = () => (
     <section className="banner-section">
       <div className="container">
-        <div className="banner-carousel">
+        <div className="banner-carousel" ref={carouselRefs.banner}>
           {dummyBanners.map((banner) => (
             <div className="banner-slide" key={banner.id}>
-              <img src={banner.image} alt={banner.alt} />
+              <ImageWithFallback src={banner.image} alt={banner.alt} />
             </div>
           ))}
         </div>
@@ -221,237 +230,151 @@ function Home() {
   );
 
   // ====================
+  // CAROUSEL SECTION
+  // ====================
+
+  const renderCarouselSection = (title, subtitle, data, gridClassName, viewAllLink) => {
+    const isExpanded = !!expandedSections[gridClassName];
+    const isClosing = !!closingSections[gridClassName];
+
+    return (
+      <section className="section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-header-flex">
+              <div className="section-title-wrapper">
+                <h2 className="section-title">{title}</h2>
+                {subtitle && <p className="section-subtitle">{subtitle}</p>}
+              </div>
+              <button
+                type="button"
+                className={`btn-view-all ${isExpanded ? 'is-expanded' : ''}`}
+                onClick={() => toggleSection(gridClassName)}
+                aria-expanded={isExpanded}
+              >
+                <span>{isExpanded ? 'Tampilkan Lebih Sedikit' : 'Lihat Semua'}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points={isExpanded ? '12 19 5 12 12 5' : '12 5 19 12 12 19'} />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {isExpanded || isClosing ? (
+            <div className={`product-grid ${gridClassName} ${isClosing ? 'grid-closing' : 'grid-opening'}`} key={gridClassName}>
+              {data.map((item) => (
+                <ProductCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  image={item.image}
+                  price={item.price}
+                  category={item.category}
+                  originalPrice={item.originalPrice}
+                  discount={item.discount}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="carousel-wrapper">
+              <button className="carousel-btn carousel-prev" onClick={() => scrollCarousel(gridClassName, -1)}>
+                ‹
+              </button>
+              <div className={`product-carousel ${gridClassName}`} ref={carouselRefs[gridClassName]}>
+                {data.map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    id={item.id}
+                    name={item.name}
+                    image={item.image}
+                    price={item.price}
+                    category={item.category}
+                    originalPrice={item.originalPrice}
+                    discount={item.discount}
+                  />
+                ))}
+              </div>
+              <button className="carousel-btn carousel-next" onClick={() => scrollCarousel(gridClassName, 1)}>
+                ›
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  // ====================
   // TOP GAMES
   // ====================
 
-  const renderTopGames = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Top 100 Games in One Place</h2>
-          <p className="section-subtitle">
-            Top up game favorit kamu dengan harga termurah dan proses cepat
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.games-grid').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="games-grid">
-            {dummyGames.map((game) => (
-              <Link to={`/product/${game.id}`} className="game-card" key={game.id}>
-                <div className="game-image-wrapper">
-                  <img src={game.image} alt={game.name} />
-                </div>
-                <div className="game-info">
-                  <h3>{game.name}</h3>
-                  <p className="game-price">{game.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli Sekarang</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.games-grid').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderTopGames = () => renderCarouselSection(
+    'Top 100 Games in One Place',
+    'Top up game favorit kamu dengan harga termurah dan proses cepat',
+    dummyGames,
+    'games',
+    '/category/topup'
   );
 
   // ====================
   // STEAM WALLET
   // ====================
 
-  const renderSteam = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Random Steam Key</h2>
-          <p className="section-subtitle">
-            Steam Wallet dan Gift Card dengan harga terbaik
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.steam-grid').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="steam-grid">
-            {dummySteam.map((item) => (
-              <Link to={`/product/${item.id}`} className="steam-card" key={item.id}>
-                <div className="steam-image-wrapper">
-                  <img src={item.image} alt={item.name} />
-                </div>
-                <div className="steam-info">
-                  <h3>{item.name}</h3>
-                  <p className="steam-price">{item.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.steam-grid').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderSteam = () => renderCarouselSection(
+    'Random Steam Key',
+    'Steam Wallet dan Gift Card dengan harga terbaik',
+    dummySteam,
+    'steam',
+    '/category/steam'
   );
 
   // ====================
   // GIFT CARD
   // ====================
 
-  const renderGiftCard = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Popular Gaming Gift Card</h2>
-          <p className="section-subtitle">
-            Gift card untuk layanan digital favorit kamu
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.giftcard-grid').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="giftcard-grid">
-            {dummyGiftcards.map((item) => (
-              <Link to={`/product/${item.id}`} className="giftcard-card" key={item.id}>
-                <div className="giftcard-image-wrapper">
-                  <img src={item.image} alt={item.name} />
-                </div>
-                <div className="giftcard-info">
-                  <h3>{item.name}</h3>
-                  <p className="giftcard-price">{item.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.giftcard-grid').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderGiftCard = () => renderCarouselSection(
+    'Popular Gaming Gift Card',
+    'Gift card untuk layanan digital favorit kamu',
+    dummyGiftcards,
+    'giftcard',
+    '/category/giftcard'
   );
 
   // ====================
   // VOUCHER
   // ====================
 
-  const renderVoucher = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Voucher Game</h2>
-          <p className="section-subtitle">
-            Voucher game dari berbagai platform favorit kamu
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.voucher-grid').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="voucher-grid">
-            {dummyVouchers.map((voucher) => (
-              <Link to={`/product/${voucher.id}`} className="voucher-card" key={voucher.id}>
-                <div className="voucher-image-wrapper">
-                  <img src={voucher.image} alt={voucher.name} />
-                </div>
-                <div className="voucher-info">
-                  <h3>{voucher.name}</h3>
-                  <p className="voucher-price-range">{voucher.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.voucher-grid').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderVoucher = () => renderCarouselSection(
+    'Voucher Game',
+    'Voucher game dari berbagai platform favorit kamu',
+    dummyVouchers,
+    'voucher',
+    '/category/voucher'
   );
 
   // ====================
   // TOP UP SECTION
   // ====================
 
-  const renderTopUp = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Top Up</h2>
-          <p className="section-subtitle">
-            Top up game favorit kamu dengan harga termurah
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.topup-grid').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="topup-grid">
-            {dummyGames.slice(0, 6).map((game) => (
-              <Link to={`/product/${game.id}`} className="topup-card" key={game.id}>
-                <div className="topup-image-wrapper">
-                  <img src={game.image} alt={game.name} />
-                </div>
-                <div className="topup-info">
-                  <h3>{game.name}</h3>
-                  <p className="topup-price">{game.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.topup-grid').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderTopUp = () => renderCarouselSection(
+    'Top Up',
+    'Top up game favorit kamu dengan harga termurah',
+    dummyGames.slice(0, 6),
+    'topup',
+    '/category/topup'
   );
 
   // ====================
   // MORE GAMES
   // ====================
 
-  const renderMoreGames = () => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">Top 100 Games</h2>
-          <p className="section-subtitle">
-            Lebih banyak game favorit lainnya
-          </p>
-        </div>
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => document.querySelector('.games-grid-large').scrollBy({left: -300, behavior: 'smooth'})}>
-            ‹
-          </button>
-          <div className="games-grid-large">
-            {dummyGames.map((game) => (
-              <Link to={`/product/${game.id}`} className="game-card-large" key={game.id}>
-                <div className="game-image-wrapper">
-                  <img src={game.image} alt={game.name} />
-                </div>
-                <div className="game-info">
-                  <h3>{game.name}</h3>
-                  <p className="game-price">{game.price}</p>
-                  <button className="btn btn-primary btn-sm">Beli Sekarang</button>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <button className="carousel-btn carousel-next" onClick={() => document.querySelector('.games-grid-large').scrollBy({left: 300, behavior: 'smooth'})}>
-            ›
-          </button>
-        </div>
-      </div>
-    </section>
+  const renderMoreGames = () => renderCarouselSection(
+    'Top 100 Games',
+    'Lebih banyak game favorit lainnya',
+    dummyGames,
+    'moregames',
+    '/category/topup'
   );
 
   // ====================
