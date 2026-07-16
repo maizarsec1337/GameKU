@@ -1,0 +1,126 @@
+# BACKEND CONFIGURATION GUIDE
+
+File ini berisi petunjuk konfigurasi yang diperlukan untuk backend GameKU.
+Frontend tidak perlu mengakses file ini secara langsung.
+
+## Environment Variables (.env)
+
+Buat file .env di folder backend/ dengan konfigurasi berikut:
+
+```
+# Server Configuration
+PORT=5000
+NODE_ENV=production
+
+# MongoDB Configuration
+MONGODB_URI=mongodb://localhost:27017/gameku
+DB_NAME=gameku
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_here
+JWT_EXPIRES_IN=7d
+JWT_REFRESH_SECRET=your_jwt_refresh_secret_here
+JWT_REFRESH_EXPIRES_IN=30d
+
+# Firebase Configuration (Backend Only)
+FIREBASE_API_KEY=your_firebase_api_key
+FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+FIREBASE_MESSAGING_SENDER_ID=your_firebase_sender_id
+FIREBASE_APP_ID=your_firebase_app_id
+FIREBASE_PRIVATE_KEY=your_firebase_private_key
+
+# Google OAuth Configuration (Backend Only)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+
+# Midtrans Configuration (Backend Only)
+MIDTRANS_SERVER_KEY=your_midtrans_server_key
+MIDtrans_CLIENT_KEY=your_midtrans_client_key
+MIDTRANS_MERCHANT_ID=your_midtrans_merchant_id
+
+# Email SMTP Configuration (Backend Only)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_email_password
+SMTP_FROM=noreply@gameku.com
+
+# Cloudinary Configuration (Backend Only)
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# API Configuration
+API_URL=http://localhost:5000/api
+FRONTEND_URL=http://localhost:5173
+
+# Session & Cookie
+SESSION_SECRET=your_session_secret
+COOKIE_NAME=gameku_token
+COOKIE_SECURE=true
+COOKIE_HTTP_ONLY=true
+COOKIE_SAME_SITE=lax
+```
+
+## Daftar Konfigurasi yang Diperlukan
+
+### 1. Firebase Authentication
+- FIREBASE_API_KEY
+- FIREBASE_AUTH_DOMAIN
+- FIREBASE_PROJECT_ID
+- Firebase SDK hanya di backend
+
+### 2. Google OAuth
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- GOOGLE_CALLBACK_URL
+- OAuth flow dihandle backend
+
+### 3. Midtrans
+- MIDTRANS_SERVER_KEY
+- MIDTRANS_CLIENT_KEY
+- MIDTRANS_MERCHANT_ID
+- Semua payment di backend
+
+### 4. JWT
+- JWT_SECRET (rahasia, tidak boleh di frontend)
+- JWT_EXPIRES_IN
+- JWT_REFRESH_SECRET
+- JWT_REFRESH_EXPIRES_IN
+
+### 5. MongoDB
+- MONGODB_URI
+- DB_NAME
+- Konfigurasi koneksi database
+
+### 6. Email SMTP
+- SMTP_HOST
+- SMTP_PORT
+- SMTP_USER
+- SMTP_PASS
+- SMTP_FROM
+- Untuk forgot password & notifikasi
+
+### 7. Storage (Cloudinary)
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+- Untuk upload KTP & foto reseller
+
+### 8. Face Verification & KTP Verification
+- Integrasi dengan layanan verifikasi identitas
+- Dihandle backend dengan AI/ML
+
+### 9. API Key & Secret
+- Semua API key di backend
+- Frontend hanya memanggil endpoint yang sudah ditentukan
+
+### 10. Session & Cookie
+- SESSION_SECRET
+- COOKIE_NAME
+- COOKIE_SECURE
+- COOKIE_HTTP_ONLY
+- COOKIE_SAME_SITE

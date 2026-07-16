@@ -1,5 +1,6 @@
 const assets = {
   logo: {
+    // Logo lengkap (ikon + tulisan GameKU) - untuk Navbar Desktop, Footer, Landing Page
     main: {
       file: '/src/gambar/logo/logo.png',
       title: 'Gameku',
@@ -8,6 +9,7 @@ const assets = {
       width: 160,
       height: 40
     },
+    // Logo ikon portrait (Glogo.png) - untuk Login, Register, Forgot Password, Reset Password, Loading Screen, Favicon
     icon: {
       file: '/src/gambar/logo/Glogo.png',
       title: 'Gameku Icon',
@@ -15,9 +17,18 @@ const assets = {
       category: 'logo',
       width: 32,
       height: 32
+    },
+    // Logo ikon landscape (Glogo2.png) - untuk Sidebar Dashboard, Header Dashboard
+    iconLandscape: {
+      file: '/src/gambar/logo/Glogo2.png',
+      title: 'Gameku Icon Landscape',
+      alt: 'Gameku Icon Landscape',
+      category: 'logo',
+      width: 80,
+      height: 32
     }
   },
-
+ 
   // Fallback image for all product cards
   fallback: {
     product: {
@@ -29,7 +40,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   banner: {
     hero1: {
       file: '/src/gambar/banner/hero1.png',
@@ -77,7 +88,7 @@ const assets = {
       height: 300
     }
   },
-
+ 
   game: {
     mlbb: {
       file: '/src/gambar/game/mlbb.png',
@@ -170,7 +181,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   voucher: {
     googleplay: {
       file: '/src/gambar/voucher/googleplay.png',
@@ -209,7 +220,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   steam: {
     wallet: {
       file: '/src/gambar/steam/steam.jpeg',
@@ -230,7 +241,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   giftcard: {
     itunes: {
       file: '/src/gambar/giftcard/itunes.png',
@@ -269,7 +280,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   membership: {
     vip: {
       file: '/src/gambar/membership/vip.png',
@@ -290,7 +301,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   promo: {
     flashsale: {
       file: '/src/gambar/promo/flashsale.png',
@@ -311,7 +322,7 @@ const assets = {
       height: 200
     }
   },
-
+ 
   icon: {
     cart: {
       file: '/src/gambar/icon/cart.png',
@@ -370,8 +381,17 @@ const assets = {
       height: 24
     }
   },
-
+ 
+  // Website background for auth pages
   background: {
+    website: {
+      file: '/gambar/background/Gbackgound.png',
+      title: 'Website Background',
+      alt: 'GameKU Website Background',
+      category: 'background',
+      width: 1920,
+      height: 1080
+    },
     hero: {
       file: '/src/gambar/background/hero-bg.png',
       title: 'Hero Background',
@@ -389,7 +409,7 @@ const assets = {
       height: 400
     }
   },
-
+ 
   avatar: {
     default: {
       file: '/src/gambar/avatar/default.png',
@@ -401,5 +421,5 @@ const assets = {
     }
   }
 };
-
+ 
 export default assets;

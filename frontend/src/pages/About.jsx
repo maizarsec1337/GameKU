@@ -8,8 +8,8 @@ function About() {
       <nav className="navbar" style={{ position: 'relative' }}>
         <div className="container">
           <Link to="/" className="navbar-logo">
-            <img src={assets.logo.main.file} alt={assets.logo.main.alt} width={120} height={36} />
-            <span style={{ fontSize: 'var(--font-xl)', fontWeight: 800, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gameku</span>
+            <img src={assets.logo.icon.file} alt={assets.logo.icon.alt} width={28} height={28} style={{ objectFit: 'contain' }} />
+            <span>Gameku</span>
           </Link>
           <div className="navbar-menu">
             <Link to="/">Beranda</Link>

@@ -1,0 +1,20 @@
+# Stack configuration untuk Security Service Haskell
+# TODO: Developer Haskell menginstall stack dan menjalankan
+
+resolver: lts-21.25
+
+# TODO:
+# Tambahkan packages yang diperlukan di section packages
+
+packages:
+- .
+
+# TODO:
+# Tambahkan extra dependencies bila diperlukan
+# extra-deps:
+# - scotty
+# - servant-server
+# - aeson
+# - mongoDB
+# - wreq
+# - cryptonite

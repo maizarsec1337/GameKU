@@ -1,19 +1,39 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import assets from '../config/assetConfig';
 import ImageWithFallback from '../components/ImageWithFallback';
 import '../css/category.css';
 
 // ====================
+// API SERVICE
+// ====================
+
+const API_BASE = '/api';
+
+const apiService = {
+  async get(endpoint) {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
+  }
+};
+
+// ====================
 // SIDEBAR MENU
 // ====================
 const sidebarMenus = [
   { slug: 'topup', name: 'Top Up Game', icon: '🎮' },
-  { slug: 'gamekey', name: 'Game Key', icon: '🎯' },
   { slug: 'voucher', name: 'Voucher', icon: '🎟️' },
   { slug: 'steam', name: 'Steam', icon: '🪙' },
   { slug: 'giftcard', name: 'Gift Card', icon: '🎁' },
+  { slug: 'minecraft', name: 'Minecraft', icon: '🧱' },
   { slug: 'membership', name: 'Membership', icon: '⭐' },
+  { slug: 'gamekey', name: 'Game Key', icon: '🎯' },
   { slug: 'promo', name: 'Promo', icon: '🔥' },
   { slug: 'account', name: 'Account', icon: '👤' },
   { slug: 'streaming', name: 'Streaming', icon: '📺' },
@@ -24,31 +44,34 @@ const sidebarMenus = [
 ];
 
 // ====================
-// DATA GAME (icon dari asset project)
+// FALLBACK DATA
 // ====================
-const gameList = [
-  { id: 1, name: 'Mobile Legends', image: assets.game.mlbb.file, slug: 'topup' },
-  { id: 2, name: 'Free Fire', image: assets.game.ff.file, slug: 'topup' },
-  { id: 3, name: 'PUBG Mobile', image: assets.game.pubg.file, slug: 'topup' },
-  { id: 4, name: 'Genshin Impact', image: assets.game.genshin.file, slug: 'topup' },
-  { id: 5, name: 'Valorant', image: assets.game.valorant.file, slug: 'topup' },
-  { id: 6, name: 'FIFA Mobile', image: assets.game.fifa.file, slug: 'topup' },
-  { id: 7, name: 'Call of Duty Mobile', image: assets.game.cod.file, slug: 'topup' },
-  { id: 8, name: 'League of Legends', image: assets.game.lol.file, slug: 'topup' },
-  { id: 9, name: 'Steam Wallet', image: assets.steam.wallet.file, slug: 'steam' },
-  { id: 10, name: 'PlayStation Plus', image: assets.game.playstation.file, slug: 'voucher' },
-  { id: 11, name: 'Xbox Live', image: assets.game.xbox.file, slug: 'voucher' },
-  { id: 12, name: 'Google Play', image: assets.voucher.googleplay.file, slug: 'voucher' },
-  { id: 13, name: 'PlayStation', image: assets.voucher.playstation.file, slug: 'voucher' },
-  { id: 14, name: 'Xbox', image: assets.voucher.xbox.file, slug: 'voucher' },
-  { id: 15, name: 'Nintendo', image: assets.voucher.nintendo.file, slug: 'voucher' },
-  { id: 16, name: 'Steam Gift Card', image: assets.steam.giftcard.file, slug: 'giftcard' },
-  { id: 17, name: 'Apple iTunes', image: assets.giftcard.itunes.file, slug: 'giftcard' },
-  { id: 18, name: 'Spotify Premium', image: assets.giftcard.spotify.file, slug: 'giftcard' },
-  { id: 19, name: 'Netflix', image: assets.giftcard.netflix.file, slug: 'giftcard' },
-  { id: 20, name: 'YouTube Premium', image: assets.giftcard.youtube.file, slug: 'giftcard' },
-  { id: 21, name: 'VIP Membership', image: assets.membership.vip.file, slug: 'membership' },
-  { id: 22, name: 'Premium Membership', image: assets.membership.premium.file, slug: 'membership' }
+const minecraftServices = [
+  { id: 501, name: 'Akun Minecraft', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 502, name: 'Shared Account', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 503, name: 'Premium Account', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 504, name: 'Minecraft Java', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 505, name: 'Minecraft Bedrock', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 506, name: 'Minecoin', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 507, name: 'Jasa Build', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 508, name: 'Pembuatan Map', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 509, name: 'Desain Skin', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 510, name: 'Jasa Plugin', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 511, name: 'Jasa Modpack', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 512, name: 'Jasa Texture Pack', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 513, name: 'Jasa Resource Pack', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 514, name: 'Setup Server', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 515, name: 'Hosting Server', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 516, name: 'Realm', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 517, name: 'VPS Minecraft', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 518, name: 'Plugin Premium', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 519, name: 'Config Server', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 520, name: 'World Download', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 521, name: 'Lobby', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 522, name: 'Spawn', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 523, name: 'Pixel Art', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 524, name: 'Redstone', image: assets.fallback.product.file, slug: 'minecraft' },
+  { id: 525, name: 'Command Block', image: assets.fallback.product.file, slug: 'minecraft' }
 ];
 
 const ALPHABET = ['#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
@@ -61,12 +84,29 @@ function Category() {
   const [search, setSearch] = useState('');
   const [activeLetter, setActiveLetter] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [products, setProducts] = useState([]);
 
   const currentMenu = sidebarMenus.find((m) => m.slug === activeSlug) || sidebarMenus[0];
 
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (activeSlug === 'minecraft') {
+        // Use fallback data for Minecraft if API not available
+        setProducts(minecraftServices);
+      } else {
+        const data = await apiService.get(`/category/${activeSlug}`);
+        if (data && data.products) {
+          setProducts(data.products);
+        }
+      }
+    };
+    fetchProducts();
+  }, [activeSlug]);
+
   // Filter berdasarkan search + huruf
   const filtered = useMemo(() => {
-    return gameList.filter((g) => {
+    return products.filter((g) => {
       const matchSearch = g.name.toLowerCase().includes(search.trim().toLowerCase());
       const firstChar = g.name.charAt(0).toUpperCase();
       const matchLetter = !activeLetter || activeLetter === '#'
@@ -74,13 +114,13 @@ function Category() {
         : firstChar === activeLetter;
       return matchSearch && matchLetter;
     });
-  }, [search, activeLetter]);
+  }, [search, activeLetter, products]);
 
   // Section konten kanan
   const sections = [
-    { title: 'Kategori Populer', icon: '🔥', items: gameList.slice(0, 8) },
-    { title: 'Kategori Baru', icon: '✨', items: gameList.slice(8, 16) },
-    { title: 'Kategori Lain', icon: '🗂️', items: gameList.slice(16) }
+    { title: 'Layanan Populer', icon: '🔥', items: products.slice(0, 8) },
+    { title: 'Layanan Baru', icon: '✨', items: products.slice(8, 16) },
+    { title: 'Layanan Lain', icon: '🗂️', items: products.slice(16) }
   ];
 
   const handleGameClick = (id) => {
@@ -101,10 +141,10 @@ function Category() {
       {/* NAVBAR */}
       <nav className="navbar" style={{ position: 'relative' }}>
         <div className="container">
-          <Link to="/" className="navbar-logo">
-            <img src={assets.logo.main.file} alt={assets.logo.main.alt} width={120} height={36} />
-            <span style={{ fontSize: 'var(--font-xl)', fontWeight: 800, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gameku</span>
-          </Link>
+<Link to="/" className="navbar-logo">
+            <img src={assets.logo.icon.file} alt={assets.logo.icon.alt} width={28} height={28} style={{ objectFit: 'contain' }} />
+            <span>Gameku</span>
+           </Link>
           <div className="navbar-menu">
             <Link to="/">Beranda</Link>
           </div>
@@ -160,10 +200,10 @@ function Category() {
             <span className="category-search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Cari Game..."
+              placeholder="Cari Layanan..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Cari Game"
+              aria-label="Cari Layanan"
             />
           </div>
 
@@ -192,18 +232,18 @@ function Category() {
                 <div className="category-grid">
                   {filtered.map((g) => (
                     <button key={g.id} type="button" className="game-item" onClick={() => handleGameClick(g.id)}>
-                      <ImageWithFallback src={g.image} alt={g.name} className="game-item-icon" />
+                      <ImageWithFallback src={g.image || assets.fallback.product.file} alt={g.name} className="game-item-icon" />
                       <span className="game-item-name">{g.name}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="category-empty">Tidak ada game yang cocok.</p>
+                <p className="category-empty">Tidak ada layanan yang cocok.</p>
               )}
             </section>
           ) : (
             /* Section default */
-            sections.map((sec) => (
+            sections.map((sec, idx) => sec.items.length > 0 ? (
               <section className="category-section" key={sec.title}>
                 <h2 className="category-section-title">
                   <span className="category-section-icon">{sec.icon}</span>
@@ -212,13 +252,13 @@ function Category() {
                 <div className="category-grid">
                   {sec.items.map((g) => (
                     <button key={g.id} type="button" className="game-item" onClick={() => handleGameClick(g.id)}>
-                      <ImageWithFallback src={g.image} alt={g.name} className="game-item-icon" />
+                      <ImageWithFallback src={g.image || assets.fallback.product.file} alt={g.name} className="game-item-icon" />
                       <span className="game-item-name">{g.name}</span>
                     </button>
                   ))}
                 </div>
               </section>
-            ))
+            ) : null)
           )}
         </main>
       </div>

@@ -1,87 +1,121 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import assets from '../config/assetConfig';
 import ProductCard from '../components/ProductCard';
 import ImageWithFallback from '../components/ImageWithFallback';
 
 // ====================
-// DUMMY DATA
+// API SERVICE
 // ====================
 
-const dummyBanners = [
-  { id: 1, image: assets.banner.hero1.file, alt: 'Banner 1' },
-  { id: 2, image: assets.banner.hero2.file, alt: 'Banner 2' },
-  { id: 3, image: assets.banner.hero3.file, alt: 'Banner 3' }
-];
+const API_BASE = '/api';
 
-const dummyGames = [
-  { id: 1, name: 'Mobile Legends', image: assets.game.mlbb.file, price: 'Rp15.000', category: 'Top Up' },
-  { id: 2, name: 'Free Fire', image: assets.game.ff.file, price: 'Rp10.000', category: 'Top Up' },
-  { id: 3, name: 'PUBG Mobile', image: assets.game.pubg.file, price: 'Rp20.000', category: 'Top Up' },
-  { id: 4, name: 'Genshin Impact', image: assets.game.genshin.file, price: 'Rp25.000', category: 'Top Up' },
-  { id: 5, name: 'Valorant', image: assets.game.valorant.file, price: 'Rp30.000', category: 'Top Up' },
-  { id: 6, name: 'FIFA Mobile', image: assets.game.fifa.file, price: 'Rp12.000', category: 'Top Up' },
-  { id: 7, name: 'Call of Duty Mobile', image: assets.game.cod.file, price: 'Rp18.000', category: 'Top Up' },
-  { id: 8, name: 'League of Legends', image: assets.game.lol.file, price: 'Rp22.000', category: 'Top Up' },
-  { id: 9, name: 'Steam Wallet', image: assets.steam.wallet.file, price: 'Rp20.000', category: 'Steam' },
-  { id: 10, name: 'PlayStation Plus', image: assets.game.playstation.file, price: 'Rp120.000', category: 'Voucher' }
-];
-
-const dummyVouchers = [
-  { id: 101, name: 'Google Play', image: assets.voucher.googleplay.file, price: 'Rp20.000 - Rp500.000', category: 'Voucher' },
-  { id: 102, name: 'PlayStation', image: assets.voucher.playstation.file, price: 'Rp50.000 - Rp1.000.000', category: 'Voucher' },
-  { id: 103, name: 'Xbox', image: assets.voucher.xbox.file, price: 'Rp30.000 - Rp750.000', category: 'Voucher' },
-  { id: 104, name: 'Nintendo', image: assets.voucher.nintendo.file, price: 'Rp25.000 - Rp600.000', category: 'Voucher' }
-];
-
-const dummySteam = [
-  { id: 201, name: 'Steam Wallet Rp20.000', image: assets.steam.wallet.file, price: 'Rp20.000', category: 'Steam' },
-  { id: 202, name: 'Steam Wallet Rp50.000', image: assets.steam.wallet.file, price: 'Rp50.000', category: 'Steam' },
-  { id: 203, name: 'Steam Wallet Rp100.000', image: assets.steam.wallet.file, price: 'Rp100.000', category: 'Steam' },
-  { id: 204, name: 'Steam Gift Card', image: assets.steam.giftcard.file, price: 'Rp75.000', category: 'Steam' }
-];
-
-const dummyGiftcards = [
-  { id: 301, name: 'Apple iTunes', image: assets.giftcard.itunes.file, price: 'Rp50.000', category: 'Gift Card' },
-  { id: 302, name: 'Spotify Premium', image: assets.giftcard.spotify.file, price: 'Rp30.000', category: 'Gift Card' },
-  { id: 303, name: 'Netflix', image: assets.giftcard.netflix.file, price: 'Rp100.000', category: 'Gift Card' },
-  { id: 304, name: 'YouTube Premium', image: assets.giftcard.youtube.file, price: 'Rp35.000', category: 'Gift Card' }
-];
-
-const dummyFlashSales = [
-  { id: 401, name: 'MLBB 100 Diamonds', image: assets.game.mlbb.file, price: 'Rp15.000', originalPrice: 'Rp25.000', discount: 40 },
-  { id: 402, name: 'FF 100 Diamonds', image: assets.game.ff.file, price: 'Rp10.000', originalPrice: 'Rp18.000', discount: 44 },
-  { id: 403, name: 'PUBG 150 UC', image: assets.game.pubg.file, price: 'Rp20.000', originalPrice: 'Rp35.000', discount: 43 },
-  { id: 404, name: 'Genshin 60 Primogems', image: assets.game.genshin.file, price: 'Rp25.000', originalPrice: 'Rp40.000', discount: 37 }
-];
-
-const dummyCategories = [
-  { name: 'Top Up Game', icon: '🎮', count: '100+ Game', slug: 'topup' },
-  { name: 'Voucher Game', icon: '🎟️', count: '50+ Voucher', slug: 'voucher' },
-  { name: 'Steam Wallet', icon: '🪙', count: '10+ Produk', slug: 'steam' },
-  { name: 'Gift Card', icon: '🎁', count: '20+ Pilihan', slug: 'giftcard' },
-  { name: 'Membership', icon: '⭐', count: '2 Paket', slug: 'membership' },
-  { name: 'Google Play', icon: '▶️', count: '5+ Nominal', slug: 'googleplay' },
-  { name: 'PlayStation', icon: '🎮', count: '10+ Voucher', slug: 'playstation' },
-  { name: 'Entertainment', icon: '🎬', count: '15+ Produk', slug: 'entertainment' }
-];
+const apiService = {
+  async get(endpoint) {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
+  }
+};
 
 function Home() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [banners, setBanners] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [topupGames, setTopupGames] = useState([]);
+  const [steamKeys, setSteamKeys] = useState([]);
+  const [minecraftProducts, setMinecraftProducts] = useState([]);
+  const [vouchers, setVouchers] = useState([]);
+  const [giftCards, setGiftCards] = useState([]);
+  const [promos, setPromos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const carouselRefs = {
-    games: useRef(null),
-    steam: useRef(null),
-    giftcard: useRef(null),
-    voucher: useRef(null),
     topup: useRef(null),
-    moregames: useRef(null),
+    steam: useRef(null),
+    minecraft: useRef(null),
+    voucher: useRef(null),
+    giftcard: useRef(null),
+    promo: useRef(null),
     banner: useRef(null)
   };
 
   // State untuk mode "Lihat Semua" (carousel <-> grid) per section
   const [expandedSections, setExpandedSections] = useState({});
   const [closingSections, setClosingSections] = useState({});
+
+  // Fetch data dari Backend API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [
+          bannersData,
+          categoriesData,
+          topupData,
+          steamData,
+          minecraftData,
+          voucherData,
+          giftcardData,
+          promoData
+        ] = await Promise.all([
+          apiService.get('/banner'),
+          apiService.get('/category'),
+          apiService.get('/game?category=topup'),
+          apiService.get('/game?category=steam'),
+          apiService.get('/category/minecraft'),
+          apiService.get('/voucher'),
+          apiService.get('/category/giftcard'),
+          apiService.get('/promo')
+        ]);
+
+        if (bannersData && bannersData.success && Array.isArray(bannersData.data)) {
+          setBanners(bannersData.data);
+        }
+
+        if (categoriesData && categoriesData.success && Array.isArray(categoriesData.data)) {
+          setCategories(categoriesData.data);
+        }
+
+        if (topupData && topupData.success && Array.isArray(topupData.data)) {
+          setTopupGames(topupData.data);
+        }
+
+        if (steamData && steamData.success && Array.isArray(steamData.data)) {
+          setSteamKeys(steamData.data);
+        }
+
+        if (minecraftData && minecraftData.success && Array.isArray(minecraftData.products)) {
+          setMinecraftProducts(minecraftData.products);
+        }
+
+        if (voucherData && voucherData.success && Array.isArray(voucherData.data)) {
+          setVouchers(voucherData.data);
+        }
+
+        if (giftcardData && giftcardData.success && Array.isArray(giftcardData.products)) {
+          setGiftCards(giftcardData.products);
+        } else if (giftcardData && giftcardData.success && Array.isArray(giftcardData.data)) {
+          setGiftCards(giftcardData.data);
+        }
+
+        if (promoData && promoData.success && Array.isArray(promoData.data)) {
+          setPromos(promoData.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const toggleSection = (key) => {
     if (expandedSections[key]) {
@@ -113,7 +147,6 @@ function Home() {
     const ref = carouselRefs[refName];
     if (ref && ref.current) {
       if (refName === 'banner') {
-        // For banner carousel, scroll by slide width
         const slide = ref.current.querySelector('.banner-slide');
         if (slide) {
           const slideWidth = slide.offsetWidth;
@@ -121,7 +154,6 @@ function Home() {
           ref.current.scrollBy({ left: direction * (slideWidth + gap), behavior: 'smooth' });
         }
       } else {
-        // For product carousel, scroll by card width
         const card = ref.current.querySelector('.product-card');
         if (card) {
           const cardWidth = card.offsetWidth;
@@ -140,7 +172,7 @@ function Home() {
     <nav className="navbar">
       <div className="container">
         <Link to="/" className="navbar-logo">
-          <img src={assets.logo.main.file} alt={assets.logo.main.alt} width={assets.logo.main.width} height={assets.logo.main.height} />
+          <img src={assets.logo.icon.file} alt={assets.logo.icon.alt} width={28} height={28} style={{ objectFit: 'contain' }} />
           <span>Gameku</span>
         </Link>
 
@@ -149,6 +181,7 @@ function Home() {
           <Link to="/category/topup" onClick={closeMenu}>Top Up</Link>
           <Link to="/category/voucher" onClick={closeMenu}>Voucher</Link>
           <Link to="/category/steam" onClick={closeMenu}>Steam</Link>
+          <Link to="/category/minecraft" onClick={closeMenu}>Minecraft</Link>
           <Link to="/promo" onClick={closeMenu}>Promo</Link>
           <Link to="/about" onClick={closeMenu}>Tentang</Link>
         </div>
@@ -157,7 +190,7 @@ function Home() {
           <button className="btn-icon" aria-label="Search" onClick={() => navigate('/search')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x1="16.65" y2="16.65" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
 
@@ -198,11 +231,15 @@ function Home() {
     <section className="banner-section">
       <div className="container">
         <div className="banner-carousel" ref={carouselRefs.banner}>
-          {dummyBanners.map((banner) => (
-            <div className="banner-slide" key={banner.id}>
-              <ImageWithFallback src={banner.image} alt={banner.alt} />
-            </div>
-          ))}
+          {banners.length > 0 ? (
+            banners.map((banner, index) => (
+              <div className="banner-slide" key={banner._id || banner.id || index}>
+                <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} />
+              </div>
+            ))
+          ) : (
+            <div className="loading-state" style={{ height: '180px' }}>Memuat banner...</div>
+          )}
         </div>
       </div>
     </section>
@@ -216,14 +253,18 @@ function Home() {
     <section className="section-categories">
       <div className="container">
         <div className="categories-row">
-          {dummyCategories.map((cat, index) => (
-            <Link to={`/category/${cat.slug}`} className="category-item" key={index}>
-              <div className="category-icon-wrapper">
-                <span className="category-emoji">{cat.icon}</span>
-              </div>
-              <span className="category-name">{cat.name}</span>
-            </Link>
-          ))}
+          {categories.length > 0 ? (
+            categories.map((cat, index) => (
+              <Link to={`/category/${cat.slug}`} className="category-item" key={cat._id || cat.id || index}>
+                <div className="category-icon-wrapper">
+                  <span className="category-emoji">{cat.icon || '🎮'}</span>
+                </div>
+                <span className="category-name">{cat.name}</span>
+              </Link>
+            ))
+          ) : (
+            <div className="loading-state">Memuat kategori...</div>
+          )}
         </div>
       </div>
     </section>
@@ -233,7 +274,7 @@ function Home() {
   // CAROUSEL SECTION
   // ====================
 
-  const renderCarouselSection = (title, subtitle, data, gridClassName, viewAllLink) => {
+  const renderCarouselSection = (title, subtitle, data, gridClassName, viewAllLink, sectionKey) => {
     const isExpanded = !!expandedSections[gridClassName];
     const isClosing = !!closingSections[gridClassName];
 
@@ -263,18 +304,23 @@ function Home() {
 
           {isExpanded || isClosing ? (
             <div className={`product-grid ${gridClassName} ${isClosing ? 'grid-closing' : 'grid-opening'}`} key={gridClassName}>
-              {data.map((item) => (
-                <ProductCard
-                  key={item.id}
-                  id={item.id}
-                  name={item.name}
-                  image={item.image}
-                  price={item.price}
-                  category={item.category}
-                  originalPrice={item.originalPrice}
-                  discount={item.discount}
-                />
-              ))}
+              {data.length > 0 ? (
+                data.map((item) => (
+                 <ProductCard
+                     key={item.id || item._id}
+                     id={item.id || item._id}
+                     name={item.name}
+                     image={item.image}
+                     price={item.price || 'Rp0'}
+                     category={item.category}
+                     platform={item.category}
+                     originalPrice={item.originalPrice}
+                     discount={item.discount}
+                   />
+                ))
+              ) : (
+                <div className="empty-state">Tidak ada produk tersedia</div>
+              )}
             </div>
           ) : (
             <div className="carousel-wrapper">
@@ -282,18 +328,23 @@ function Home() {
                 ‹
               </button>
               <div className={`product-carousel ${gridClassName}`} ref={carouselRefs[gridClassName]}>
-                {data.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    image={item.image}
-                    price={item.price}
-                    category={item.category}
-                    originalPrice={item.originalPrice}
-                    discount={item.discount}
-                  />
-                ))}
+                {data.length > 0 ? (
+                  data.map((item) => (
+                    <ProductCard
+                      key={item.id || item._id}
+                      id={item.id || item._id}
+                      name={item.name}
+                      image={item.image}
+                      price={item.price || 'Rp0'}
+                      category={item.category}
+                      platform={item.category}
+                      originalPrice={item.originalPrice}
+                      discount={item.discount}
+                    />
+                  ))
+                ) : (
+                  <div className="loading-state">Memuat produk...</div>
+                )}
               </div>
               <button className="carousel-btn carousel-next" onClick={() => scrollCarousel(gridClassName, 1)}>
                 ›
@@ -306,109 +357,150 @@ function Home() {
   };
 
   // ====================
-  // TOP GAMES
+  // TOP UP GAMES SECTION (Official Product)
   // ====================
 
-  const renderTopGames = () => renderCarouselSection(
-    'Top 100 Games in One Place',
-    'Top up game favorit kamu dengan harga termurah dan proses cepat',
-    dummyGames,
-    'games',
-    '/category/topup'
-  );
+  const renderTopUpGames = () => {
+    const topupData = topupGames.length > 0 ? topupGames : [];
+
+    return renderCarouselSection(
+      'Top Up Games',
+      'Produk Official GameKU - Mobile Legends, Free Fire, PUBG, Valorant, Roblox, Growtopia',
+      topupData,
+      'topup',
+      '/category/topup'
+    );
+  };
 
   // ====================
-  // STEAM WALLET
+  // RANDOM STEAM KEY SECTION (Marketplace Product)
   // ====================
 
-  const renderSteam = () => renderCarouselSection(
-    'Random Steam Key',
-    'Steam Wallet dan Gift Card dengan harga terbaik',
-    dummySteam,
-    'steam',
-    '/category/steam'
-  );
+  const renderSteamKeys = () => {
+    const steamData = steamKeys.length > 0 ? steamKeys : [];
+
+    return renderCarouselSection(
+      'Random Steam Key',
+      'Produk dari Marketplace Seller - Steam Wallet & Game Key',
+      steamData,
+      'steam',
+      '/category/steam'
+    );
+  };
 
   // ====================
-  // GIFT CARD
+  // MINECRAFT MARKETPLACE SECTION
   // ====================
 
-  const renderGiftCard = () => renderCarouselSection(
-    'Popular Gaming Gift Card',
-    'Gift card untuk layanan digital favorit kamu',
-    dummyGiftcards,
-    'giftcard',
-    '/category/giftcard'
-  );
+  const renderMinecraft = () => {
+    const minecraftData = minecraftProducts.length > 0 ? minecraftProducts : [];
+
+    return renderCarouselSection(
+      'Minecraft Marketplace',
+      'Akun, Shared Account, Minecoin, Server, Jasa Build, Plugin, Resource Pack',
+      minecraftData,
+      'minecraft',
+      '/category/minecraft'
+    );
+  };
 
   // ====================
-  // VOUCHER
+  // VOUCHER SECTION
   // ====================
 
-  const renderVoucher = () => renderCarouselSection(
-    'Voucher Game',
-    'Voucher game dari berbagai platform favorit kamu',
-    dummyVouchers,
-    'voucher',
-    '/category/voucher'
-  );
+  const renderVoucherSection = () => {
+    const voucherData = vouchers.length > 0 ? vouchers : [];
+
+    return renderCarouselSection(
+      'Voucher Game',
+      'Voucher untuk berbagai platform game',
+      voucherData,
+      'voucher',
+      '/category/voucher'
+    );
+  };
 
   // ====================
-  // TOP UP SECTION
+  // GIFT CARD SECTION
   // ====================
 
-  const renderTopUp = () => renderCarouselSection(
-    'Top Up',
-    'Top up game favorit kamu dengan harga termurah',
-    dummyGames.slice(0, 6),
-    'topup',
-    '/category/topup'
-  );
+  const renderGiftCardSection = () => {
+    const giftcardData = giftCards.length > 0 ? giftCards : [];
+
+    return renderCarouselSection(
+      'Gift Card',
+      'Gift card untuk hiburan digital',
+      giftcardData,
+      'giftcard',
+      '/category/giftcard'
+    );
+  };
 
   // ====================
-  // MORE GAMES
+  // PROMO SECTION
   // ====================
 
-  const renderMoreGames = () => renderCarouselSection(
-    'Top 100 Games',
-    'Lebih banyak game favorit lainnya',
-    dummyGames,
-    'moregames',
-    '/category/topup'
-  );
-
-  // ====================
-  // FEATURES
-  // ====================
-
-  const renderFeatures = () => (
+  const renderPromoSection = () => (
     <section className="section">
       <div className="container">
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">⚡</div>
-            <h3>Proses Instan</h3>
-            <p>Top up dan voucher langsung masuk ke akun kamu dalam hitungan detik</p>
+        <div className="section-header">
+          <div className="section-header-flex">
+            <div className="section-title-wrapper">
+              <h2 className="section-title">Promo Spesial</h2>
+              <p className="section-subtitle">Nikmati berbagai promo menarik dari GameKU</p>
+            </div>
+            <Link to="/promo" className="btn-view-all">
+              <span>Lihat Semua</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </Link>
           </div>
-          <div className="feature-card">
-            <div className="feature-icon">🛡️</div>
-            <h3>100% Aman</h3>
-            <p>Transaksi aman dengan sistem enkripsi dan terpercaya</p>
+        </div>
+
+        <div className="carousel-wrapper">
+          <button className="carousel-btn carousel-prev" onClick={() => scrollCarousel('promo', -1)}>
+            ‹
+          </button>
+          <div className="product-carousel promo" ref={carouselRefs.promo}>
+            {promos.length > 0 ? (
+              promos.map((item) => (
+                <ProductCard
+                  key={item.id || item._id}
+                  id={item.id || item._id}
+                  name={item.title || item.name}
+                  image={item.image}
+                  price={item.price || 'Rp0'}
+                  category={item.category}
+                  platform={item.category}
+                  originalPrice={item.originalPrice}
+                  discount={item.discount}
+                />
+              ))
+            ) : (
+              <div className="loading-state">Memuat promo...</div>
+            )}
           </div>
-          <div className="feature-card">
-            <div className="feature-icon">💬</div>
-            <h3>Support 24/7</h3>
-            <p>Customer service siap membantu kamu kapan saja</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">💰</div>
-            <h3>Harga Termurah</h3>
-            <p>Harga terbaik dan termurah dibanding toko lainnya</p>
-          </div>
+          <button className="carousel-btn carousel-next" onClick={() => scrollCarousel('promo', 1)}>
+            ›
+          </button>
         </div>
       </div>
     </section>
   );
+
+  // ====================
+  // LOADING STATE
+  // ====================
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner">Memuat...</div>
+      </div>
+    );
+  }
 
   // ====================
   // FOOTER
@@ -423,7 +515,7 @@ function Home() {
             <p>
               Gameku adalah platform digital gaming store terpercaya di Indonesia. 
               Kami menyediakan Top Up Game, Voucher Game, Steam Wallet, Gift Card, 
-              Membership, dan berbagai kebutuhan digital lainnya dengan harga terbaik.
+              Minecraft, dan berbagai kebutuhan digital lainnya dengan harga terbaik.
             </p>
             <div className="footer-social">
               <a href="#" aria-label="Facebook">FB</a>
@@ -441,6 +533,7 @@ function Home() {
               <li><Link to="/category/voucher">Voucher Game</Link></li>
               <li><Link to="/category/steam">Steam Wallet</Link></li>
               <li><Link to="/category/giftcard">Gift Card</Link></li>
+              <li><Link to="/category/minecraft">Minecraft</Link></li>
               <li><Link to="/category/membership">Membership</Link></li>
             </ul>
           </div>
@@ -490,13 +583,12 @@ function Home() {
       {renderNavbar()}
       {renderBanner()}
       {renderCategories()}
-      {renderTopGames()}
-      {renderSteam()}
-      {renderGiftCard()}
-      {renderVoucher()}
-      {renderTopUp()}
-      {renderMoreGames()}
-      {renderFeatures()}
+      {renderTopUpGames()}
+      {renderSteamKeys()}
+      {renderMinecraft()}
+      {renderVoucherSection()}
+      {renderGiftCardSection()}
+      {renderPromoSection()}
       {renderFooter()}
     </>
   );

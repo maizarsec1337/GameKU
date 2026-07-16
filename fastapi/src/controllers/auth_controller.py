@@ -3,8 +3,20 @@ users = [
     {"id": 2, "email": "user@gameku.com", "password": "hashed_password", "name": "User Gameku", "role": "user"}
 ]
 
+# TODO:
+# Import Security Service client untuk validasi token
+# from src.security.client import verify_token, log_audit, check_fraud
+
+# TODO:
+# Import Security Service gateway untuk database operasi
+# from src.security.gateway import check_and_insert_nonce, insert_audit_log
+
 
 def register(email: str, password: str, name: str):
+    # TODO: Implementasi Security Service - Validasi Request.
+    # TODO: Implementasi Security Service - Nonce Validation.
+    # TODO: Implementasi Security Service - Timestamp Validation.
+    # TODO: Implementasi Security Service - Request Signature.
     try:
         existing = next((u for u in users if u["email"] == email), None)
         if existing:
@@ -23,6 +35,11 @@ def register(email: str, password: str, name: str):
 
 
 def login(email: str, password: str):
+    # TODO: Implementasi Security Service - Validasi Request.
+    # TODO: Implementasi Security Service - Nonce Validation.
+    # TODO: Implementasi Security Service - Timestamp Validation.
+    # TODO: Implementasi Security Service - Request Signature.
+    # TODO: Implementasi Security Service - Token Verification.
     try:
         user = next((u for u in users if u["email"] == email), None)
         if not user or user["password"] != password:  # TODO: verify hash

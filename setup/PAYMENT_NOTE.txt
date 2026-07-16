@@ -1,0 +1,46 @@
+# PAYMENT INTEGRATION NOTE
+
+Semua integrasi payment (Midtrans) berada di sisi Backend saja.
+Frontend tidak boleh mengakses Midtrans secara langsung.
+
+## Backend Responsibility
+
+Backend bertanggung jawab untuk:
+- Membuat transaksi payment via Midtrans API
+- Menggenerate snap token
+- Memverifikasi payment status
+- Mengirim notifikasi webhook
+- Update status order di database
+
+## Frontend Responsibility
+
+Frontend hanya:
+- Menampilkan status pembayaran
+- Menampilkan QR code atau link payment (dari backend)
+- Menerima callback setelah payment selesai
+
+## API Flow
+
+### 1. Membuat Transaksi
+Frontend -> Backend: POST /api/payment/create
+Backend: Buat transaksi ke Midtrans, dapatkan snap_token, simpan ke DB
+
+### 2. Menampilkan Payment
+Frontend: Redirect ke snap_url atau tampilkan QR code dari backend
+
+### 3. Verifikasi Payment
+Backend: Terima webhook Midtrans, update status order
+
+## Yang DILARANG di Frontend
+
+- Midtrans Client Key
+- Midtrans Snap JS SDK
+- Payment API calls langsung
+- Transaction details yang tidak dari backend
+
+## Yang DiPERBOLEHKAN di Frontend
+
+- Tampilkan status "Menunggu Pembayaran"
+- Tampilkan status "Pembayaran Berhasil"
+- Redirect ke halaman payment (dari backend)
+- Tampilkan invoice dari backend

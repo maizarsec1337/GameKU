@@ -534,20 +534,20 @@ function Product() {
                 <h2 className="pd-section-title">Produk Serupa</h2>
                 <div className="pd-horizontal-scroll">
                   {related.map((p) => (
-                    <Link
-                      key={p.id}
-                      to={`/product/${p.id}`}
-                      className="pd-horizontal-card"
-                      onClick={() => goToProduct(p.id)}
-                    >
-                      <div className="pd-horizontal-img">
-                        <ImageWithFallback src={p.image} alt={p.name} />
-                      </div>
-                      <div className="pd-horizontal-body">
-                        <div className="pd-horizontal-name">{p.name}</div>
-                        <div className="pd-horizontal-price">{p.price}</div>
-                      </div>
-                    </Link>
+              <Link
+                       key={p.id}
+                       to={`/product/${p.id}`}
+                       className="pd-horizontal-card"
+                       onClick={() => goToProduct(p.id)}
+                     >
+                       <div className="pd-horizontal-img">
+                         <ImageWithFallback src={p.image} alt={p.name} />
+                       </div>
+                       <div className="pd-horizontal-body">
+                         <div className="pd-horizontal-name">{p.name}</div>
+                         <div className="pd-horizontal-price">{p.price}</div>
+                       </div>
+                     </Link>
                   ))}
                 </div>
               </>

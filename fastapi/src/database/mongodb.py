@@ -126,6 +126,11 @@ class UserRepository(BaseRepository):
         doc = await self.collection.find_one({"provider": provider, "provider_uid": provider_uid})
         return self._serialize(doc) if doc else None
     
+    async def get_by_uid_firebase(self, uid: str) -> Optional[Dict[str, Any]]:
+        """Get user by Firebase UID"""
+        doc = await self.collection.find_one({"uid_firebase": uid})
+        return self._serialize(doc) if doc else None
+    
     async def update(self, user_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         from bson import ObjectId
         update_data["updated_at"] = datetime.utcnow()
@@ -134,6 +139,41 @@ class UserRepository(BaseRepository):
             {"$set": update_data}
         )
         return await self.get_by_id(user_id)
+
+
+class ResellerRepository(BaseRepository):
+    def __init__(self):
+        super().__init__("resellers")
+    
+    async def create(self, reseller_data: Dict[str, Any]) -> Dict[str, Any]:
+        reseller_data["tanggal_pengajuan"] = datetime.utcnow()
+        reseller_data["status_verifikasi"] = "proses"
+        result = await self.collection.insert_one(reseller_data)
+        reseller_data["_id"] = result.inserted_id
+        return self._serialize(reseller_data)
+    
+    async def get_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        from bson import ObjectId
+        doc = await self.collection.find_one({"user_id": ObjectId(user_id)})
+        return self._serialize(doc) if doc else None
+    
+    async def update_status(self, reseller_id: str, status: str, admin_id: str = None, catatan: str = None):
+        """Update reseller verification status"""
+        from bson import ObjectId
+        update_data = {
+            "status_verifikasi": status,
+            "tanggal_persetujuan": datetime.utcnow()
+        }
+        if admin_id:
+            update_data["admin_approval"] = ObjectId(admin_id)
+        if catatan:
+            update_data["catatan"] = catatan
+        
+        await self.collection.update_one(
+            {"_id": ObjectId(reseller_id)},
+            {"$set": update_data}
+        )
+        return await self.get_by_id(reseller_id)
 
 
 class GameRepository(BaseRepository):
@@ -300,6 +340,7 @@ class BannerRepository(BaseRepository):
 
 # Singleton instances
 user_repo = UserRepository()
+reseller_repo = ResellerRepository()
 game_repo = GameRepository()
 category_repo = CategoryRepository()
 voucher_repo = VoucherRepository()
@@ -414,6 +455,7 @@ __all__ = [
     "close_mongo_connection",
     "get_database",
     "user_repo",
+    "reseller_repo",
     "game_repo",
     "category_repo",
     "voucher_repo",

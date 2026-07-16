@@ -1,0 +1,250 @@
+# AUTHENTICATION FLOW - GameKU
+
+Dokumen ini menjelaskan alur authentication di GameKU.
+Frontend hanya memanggil backend API, tidak ada implementasi auth di sisi frontend.
+
+## API Endpoints
+
+### POST /api/auth/register
+Register akun baru dengan email & password
+Body:
+- fullName: string (required)
+- username: string (required) 
+- phone: string (required)
+- email: string (required)
+- password: string (required)
+- role: string (default: "user")
+
+Response:
+- success: boolean
+- token: string
+- user: object
+
+### POST /api/auth/login
+Login dengan email & password
+Body:
+- email: string (required)
+- password: string (required)
+
+Response:
+- success: boolean
+- token: string
+- user: object
+
+### GET /api/auth/google
+Redirect ke Google OAuth (backend)
+Frontend: window.location.href ke endpoint ini
+
+### GET /api/auth/google/callback
+Callback dari Google OAuth
+Response:
+- success: boolean
+- token: string
+- user: object
+- needs_completion: boolean (jika registrasi Google belum lengkap)
+
+### POST /api/auth/logout
+Logout dan hapus session
+Response:
+- success: boolean
+
+### GET /api/auth/me
+Ambil data user yang sedang login
+Header: Authorization: Bearer {token}
+Response:
+- success: boolean
+- user: object
+
+### POST /api/auth/forgot-password
+Kirim email reset password
+Body:
+- email: string (required)
+
+Response:
+- success: boolean
+- message: string
+
+### POST /api/auth/reset-password
+Reset password dengan token
+Body:
+- token: string (from email)
+- password: string (required)
+
+Response:
+- success: boolean
+- message: string
+
+### POST /api/auth/reseller
+Daftar program reseller
+Header: Authorization: Bearer {token}
+Content-Type: multipart/form-data
+Body:
+- ktp_photo: file (required)
+- selfie_with_ktp: file (required)
+- bank_account: string (required)
+- account_holder_name: string (required)
+
+Response:
+- success: boolean
+- message: string
+
+### GET /api/auth/reseller/status
+Cek status pengajuan reseller
+Header: Authorization: Bearer {token}
+Response:
+- status: "belum" | "proses" | "disetujui" | "ditolak"
+- message: string (optional)
+
+============================================
+## REGISTER FLOW
+============================================
+
+1. User mengisi form register (web browser)
+   - Nama Lengkap
+   - Username  
+   - Nomor Telepon
+   - Email
+   - Password
+   - Konfirmasi Password
+
+2. Frontend mengirim POST /api/auth/register
+
+3. Backend:
+   - Validasi data
+   - Cek email/username unik
+   - Hash password
+   - Simpan ke MongoDB
+   - Set role default: "user"
+   - Generate JWT token
+   - Return token ke frontend
+
+4. Frontend:
+   - Simpan token ke localStorage
+   - Redirect ke halaman utama
+
+============================================
+## LOGIN FLOW
+============================================
+
+1. User mengisi email & password (web browser)
+
+2. Frontend mengirim POST /api/auth/login
+
+3. Backend:
+   - Cari user berdasarkan email
+   - Verifikasi password hash
+   - Generate JWT token
+   - Set cookie httpOnly
+   - Return token ke frontend
+
+4. Frontend:
+   - Simpan token ke localStorage
+   - Redirect ke halaman utama
+
+============================================
+## LOGIN WITH GOOGLE FLOW
+============================================
+
+1. User klik tombol "Masuk dengan Google"
+
+2. Frontend redirect ke GET /api/auth/google
+
+3. Backend redirect ke Google OAuth
+
+4. User login di Google
+
+5. Google redirect ke GET /api/auth/google/callback
+
+6. Backend:
+   - Verifikasi token Google
+   - Cek user ada/tidak di database
+   - Jika ada: generate JWT, return token
+   - Jika tidak ada: cek data lengkap
+     - Jika data lengkap: buat akun, return token
+     - Jika tidak: return needs_completion=true
+
+7. Frontend:
+   - Jika needs_completion: tampilkan form lengkap
+   - Jika tidak: simpan token, redirect ke home
+
+============================================
+## FORGOT PASSWORD FLOW
+============================================
+
+1. User masuk ke halaman lupa password
+
+2. User mengisi email
+
+3. Frontend POST /api/auth/forgot-password
+
+4. Backend:
+   - Cari user berdasarkan email
+   - Generate reset token (JWT)
+   - Kirim email via SMTP
+   - Token expired 1 jam
+
+5. Frontend:
+   - Tampilkan pesan sukses
+   - Link ke halaman reset password
+
+============================================
+## RESET PASSWORD FLOW
+============================================
+
+1. User klik tautan di email
+
+2. Frontend GET /api/auth/reset-password?token=xxx
+
+3. Backend:
+   - Verifikasi token
+   - Tampilkan form reset password
+
+4. User isi password baru
+
+5. Frontend POST /api/auth/reset-password
+
+6. Backend:
+   - Verifikasi token
+   - Hash password baru
+   - Update password user
+   - Return success
+
+7. Frontend:
+   - Tampilkan pesan sukses
+   - Redirect ke login
+
+============================================
+## UPGRADE TO RESELLER FLOW
+============================================
+
+1. User sudah login
+
+2. User buka halaman profil
+
+3. User isi form reseller:
+   - Foto KTP
+   - Selfie dengan KTP
+   - Nomor Rekening
+   - Nama Pemilik Rekening
+
+4. Frontend POST /api/auth/reseller
+
+5. Backend:
+   - Upload foto ke Cloudinary
+   - Simpan data reseller request
+   - Status: "proses"
+   - Verifikasi otomatis (AI/ML)
+   - Verifikasi manual admin
+
+6. Admin verifikasi:
+   - Cek KTP valid
+   - Cek selfie match
+   - Cek data rekening
+
+7. Backend update status:
+   - "disetujui" -> role jadi "reseller"
+   - "ditolak" -> kirim notifikasi
+
+8. Frontend:
+   - Tampilkan status pengajuan
+   - Jika disetujui, refresh user data

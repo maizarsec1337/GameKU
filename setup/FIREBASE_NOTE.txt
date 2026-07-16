@@ -1,0 +1,50 @@
+# FIREBASE INTEGRATION NOTE
+
+Semua integrasi Firebase berada di sisi Backend saja.
+Frontend tidak boleh mengakses Firebase secara langsung.
+
+## Backend Responsibility
+
+Backend bertanggung jawab untuk:
+- Firebase Authentication (semua provider)
+- Firebase Admin SDK
+- Firebase Cloud Messaging (FCM)
+- Firebase Storage
+- Firebase Firestore (jika dipakai)
+
+## Yang DILARANG di Frontend
+
+- Firebase SDK (firebase-app, firebase-auth, dll)
+- Firebase API Key
+- Firebase Auth state management
+- Firebase Firestore queries langsung
+- Firebase Storage upload langsung
+
+## Yang DiPERBOLEHKAN di Frontend
+
+- Memanggil endpoint backend untuk auth
+- Memanggil endpoint backend untuk upload
+- Menampilkan data yang sudah disediakan backend
+
+## Google OAuth Flow
+
+Frontend hanya melakukan:
+1. Klik tombol "Login dengan Google"
+2. Redirect ke /api/auth/google (backend)
+3. Backend handle OAuth dengan Firebase Admin
+4. Backend redirect kembali ke frontend dengan token
+
+## Auth Endpoints
+
+- POST /api/auth/login - Email/password login via Firebase Auth
+- POST /api/auth/register - Register via Firebase Auth
+- GET /api/auth/google - Google OAuth initiation
+- GET /api/auth/google/callback - Google OAuth callback
+- POST /api/auth/logout - Logout via Firebase Auth
+
+## Data Flow
+
+User -> Frontend -> Backend API -> Firebase Auth -> Backend -> Frontend
+
+Frontend tidak pernah berhubungan langsung dengan Firebase.
+Semua koneksi Firebase HARUS melalui backend.

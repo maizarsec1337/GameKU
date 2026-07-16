@@ -3,6 +3,9 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Product from './pages/Product';
 import Category from './pages/Category';
 import Search from './pages/Search';
@@ -20,6 +23,9 @@ function AppRouter() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/product/:id" element={<Product />} />
       <Route path="/category/:slug" element={<Category />} />
       <Route path="/search" element={<Search />} />

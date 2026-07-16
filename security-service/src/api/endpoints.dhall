@@ -1,0 +1,102 @@
+-- Endpoints Security Service untuk Haskell
+-- File ini berisi definisi endpoint yang akan diimplementasikan developer Haskell
+
+-- TODO:
+-- Import library yang diperlukan:
+-- - Servant untuk routing
+-- - Aeson untuk JSON
+-- - Crypto untuk enkripsi
+
+-- Endpoint Definitions
+-- 
+-- POST /validate/request
+--   Request body: { method: Text, path: Text, body: JSON, headers: JSON, timestamp: Integer, nonce: Text }
+--   Response: { valid: Bool, message: Text }
+--
+-- POST /validate/signature
+--   Request body: { signature: Text, data: JSON, secret: Text }
+--   Response: { valid: Bool, message: Text }
+--
+-- POST /validate/timestamp
+--   Request body: { timestamp: Integer, tolerance: Integer }
+--   Response: { valid: Bool, message: Text }
+--
+-- POST /validate/nonce
+--   Request body: { nonce: Text, timestamp: Integer }
+--   Response: { valid: Bool, message: Text, replay_detected: Bool }
+--
+-- POST /signature/generate
+--   Request body: { data: JSON, secret: Text }
+--   Response: { signature: Text }
+--
+-- POST /signature/verify
+--   Request body: { signature: Text, data: JSON, secret: Text }
+--   Response: { valid: Bool }
+--
+-- POST /hash
+--   Request body: { data: Text, algorithm: Text }
+--   Response: { hash: Text }
+--
+-- POST /encrypt
+--   Request body: { data: Text, key: Text }
+--   Response: { encrypted: Text }
+--
+-- POST /decrypt
+--   Request body: { encrypted: Text, key: Text }
+--   Response: { data: Text }
+--
+-- POST /token/verify
+--   Request body: { token: Text, secret: Text }
+--   Response: { valid: Bool, payload: JSON }
+--
+-- POST /token/validate
+--   Request body: { token: Text }
+--   Response: { valid: Bool }
+--
+-- POST /fraud/check
+--   Request body: { ip: Text, user_id: Text, amount: Number, product: Text }
+--   Response: { fraud_risk: Number, reasons: List Text }
+--
+-- POST /fraud/score
+--   Request body: { transaction_data: JSON }
+--   Response: { score: Number, risk_level: Text }
+--
+-- POST /audit/log
+--   Request body: { action: Text, user_id: Text, ip: Text, details: JSON }
+--   Response: { logged: Bool, audit_id: Text }
+--
+-- GET /audit/history
+--   Query params: user_id, action, limit
+--   Response: { logs: List JSON }
+--
+-- POST /integrity/check
+--   Request body: { data: Text, expected_hash: Text, algorithm: Text }
+--   Response: { valid: Bool }
+--
+-- POST /validate/steam-key
+--   Request body: { steam_key: Text }
+--   Response: { valid: Bool, product_id: Text }
+--
+-- POST /validate/giftcard
+--   Request body: { code: Text, type: Text }
+--   Response: { valid: Bool, balance: Number }
+--
+-- POST /validate/voucher
+--   Request body: { code: Text }
+--   Response: { valid: Bool, value: Number, expired: Bool }
+--
+-- POST /webhook/verify
+--   Request body: { payload: JSON, signature: Text, secret: Text }
+--   Response: { valid: Bool }
+--
+-- POST /rate-limit/check
+--   Request body: { ip: Text, endpoint: Text, limit: Integer, window: Integer }
+--   Response: { allowed: Bool, remaining: Integer, reset_at: Integer }
+--
+-- POST /ip/reputation
+--   Request body: { ip: Text }
+--   Response: { reputation: Text, score: Number }
+--
+-- POST /device/fingerprint
+--   Request body: { user_agent: Text, ip: Text, headers: JSON }
+--   Response: { fingerprint: Text } -- placeholder
