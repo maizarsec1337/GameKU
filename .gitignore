@@ -11,3 +11,4 @@ frontend/.env
 # Storage - uploaded files not tracked in git
 storage/
 !storage/.gitkeep
+backend/keys/gameku_keys.json
