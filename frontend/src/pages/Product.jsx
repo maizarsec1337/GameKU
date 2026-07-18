@@ -489,36 +489,75 @@ function Product() {
               </p>
             </Accordion>
 
-            {/* Review Pembeli */}
-            <h2 className="pd-section-title">Review Pembeli</h2>
-            <div className="pd-review-summary">
-              <div className="pd-review-big">
-                <div className="pd-review-score">{product.rating}</div>
-                <div className="pd-review-count-big">dari 5.0</div>
+              {/* Review Pembeli */}
+      <h2 className="pd-section-title">Review Pembeli</h2>
+      <div className="pd-review-summary">
+        <div className="pd-review-big">
+          <div className="pd-review-score">{product.rating}</div>
+          <div className="pd-review-count-big">dari 5.0</div>
+        </div>
+        <div className="pd-rating-bar">
+          {[5, 4, 3, 2, 1].map((star) => {
+            const percent = (star === 5 ? 70 : star === 4 ? 20 : star === 3 ? 5 : star === 2 ? 3 : 2);
+            return (
+              <div className="pd-rating-bar-item" key={star}>
+                <span className="pd-rating-bar-label">{star}</span>
+                <div className="pd-rating-bar-track">
+                  <div className="pd-rating-bar-fill" style={{ width: `${percent}%` }} />
+                </div>
+                <span className="pd-rating-bar-percent">{percent}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="pd-review-list">
+        {reviews.map((r, i) => (
+          <div className="pd-review-item" key={i}>
+            <div className="pd-review-head">
+              <div className="pd-review-avatar">
+                <ImageWithFallback src={r.avatar} alt={r.name} />
               </div>
               <div>
-                <Stars value={product.rating} />
-                <p style={{ color: 'var(--gray-2)', fontSize: 'var(--font-sm)', marginTop: 4 }}>
-                  Berdasarkan {product.reviewCount} ulasan pembeli terverifikasi
-                </p>
+                <div className="pd-review-user">{r.name}</div>
+                <div className="pd-review-date">{r.date} • <Stars value={r.rating} /></div>
               </div>
             </div>
-            <div className="pd-review-list">
-              {reviews.map((r, i) => (
-                <div className="pd-review-item" key={i}>
-                  <div className="pd-review-head">
-                    <div className="pd-review-avatar">
-                      <ImageWithFallback src={r.avatar} alt={r.name} />
-                    </div>
-                    <div>
-                      <div className="pd-review-user">{r.name}</div>
-                      <div className="pd-review-date">{r.date} • <Stars value={r.rating} /></div>
-                    </div>
-                  </div>
-                  <p className="pd-review-comment">{r.comment}</p>
+            <p className="pd-review-comment">{r.comment}</p>
+            {i === 0 && (
+              <div className="pd-review-seller-reply">
+                <div className="pd-review-seller-reply-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4v7" />
+                    <path d="M20 20v-7" />
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                  </svg>
+                  Penjual
                 </div>
-              ))}
+                <p className="pd-review-seller-reply-text">
+                  Terima kasih atas ulasan Anda! Kami senang bisa membantu. Jika ada pertanyaan lain, silakan chat kami kapan saja.
+                </p>
+              </div>
+            )}
+            <div className="pd-review-actions">
+              <button type="button" className="pd-review-like-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 1H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-6z" />
+                  <path d="M14 1l-2 4-2-4" />
+                </svg>
+                <span>12</span>
+              </button>
+              <button type="button" className="pd-review-like-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 15V3" />
+                  <path d="M14 9l-4-4-4 4" />
+                </svg>
+                <span>2</span>
+              </button>
             </div>
+          </div>
+        ))}
+      </div>
 
             {/* FAQ */}
             <h2 className="pd-section-title">Pertanyaan Umum (FAQ)</h2>

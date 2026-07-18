@@ -35,13 +35,16 @@ export const authAPI = {
     return response.data;
   },
 
-  // Google login - redirects to backend Google OAuth endpoint
-  googleLogin: async () => {
-    // Redirect to backend Google OAuth endpoint
-    window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/google`;
+  // Google login - send Firebase ID token to backend for verification
+  googleLogin: async (idToken) => {
+    if (!idToken) {
+      throw new Error('ID token diperlukan');
+    }
+    const response = await api.post('/auth/google', { idToken });
+    return response.data;
   },
 
-  // Google callback handler
+  // Google callback handler (legacy)
   googleCallback: async () => {
     const response = await api.get('/auth/google/callback');
     return response.data;

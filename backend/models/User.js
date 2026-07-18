@@ -52,6 +52,12 @@ const UserSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Balance cannot be negative']
   },
+  // PhotoURL for Google OAuth profile picture
+  photoURL: {
+    type: String,
+    maxlength: [500, 'Photo URL too long'],
+    default: '/gambar/avatar/default.png'
+  },
   // Avatar URL - stored in storage/avatars
   avatar: {
     type: String,

@@ -9,15 +9,18 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       },
       '/gambar': {
         target: 'http://localhost:8000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       },
       '/storage': {
         target: 'http://localhost:8000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       }
     }
   },

@@ -15,8 +15,8 @@ const {
 } = require('../middleware/uploadMiddleware');
 const { saveFile } = require('../helpers/storageHelper');
 
-// Upload single file endpoint
-const handleSingleUpload = (uploadMiddleware, storageType) => {
+// Upload single file endpoint - accepts storageType from closure
+const handleSingleUpload = (storageType) => {
   return async (req, res) => {
     try {
       if (!req.file) {
@@ -46,36 +46,36 @@ const handleSingleUpload = (uploadMiddleware, storageType) => {
 };
 
 // Avatar upload
-router.post('/avatar', uploadAvatar, handleSingleUpload(null, 'avatars'));
+router.post('/avatar', uploadAvatar, handleSingleUpload('avatars'));
 
 // Product image upload
-router.post('/product', uploadProduct, handleSingleUpload(null, 'products'));
+router.post('/product', uploadProduct, handleSingleUpload('products'));
 
 // Banner upload
-router.post('/banner', uploadBanner, handleSingleUpload(null, 'banners'));
+router.post('/banner', uploadBanner, handleSingleUpload('banners'));
 
 // Promo upload
-router.post('/promo', uploadPromo, handleSingleUpload(null, 'promos'));
+router.post('/promo', uploadPromo, handleSingleUpload('promos'));
 
 // Voucher upload
-router.post('/voucher', uploadVoucher, handleSingleUpload(null, 'vouchers'));
+router.post('/voucher', uploadVoucher, handleSingleUpload('vouchers'));
 
 // Category upload
-router.post('/category', uploadCategory, handleSingleUpload(null, 'categories'));
+router.post('/category', uploadCategory, handleSingleUpload('categories'));
 
 // KTP upload
-router.post('/ktp', uploadKTP, handleSingleUpload(null, 'ktp'));
+router.post('/ktp', uploadKTP, handleSingleUpload('ktp'));
 
 // Selfie upload
-router.post('/selfie', uploadSelfie, handleSingleUpload(null, 'selfie'));
+router.post('/selfie', uploadSelfie, handleSingleUpload('selfie'));
 
 // Document upload
-router.post('/document', uploadDocument, handleSingleUpload(null, 'documents'));
+router.post('/document', uploadDocument, handleSingleUpload('documents'));
 
 // Chat image upload
-router.post('/chat', uploadChat, handleSingleUpload(null, 'chat'));
+router.post('/chat', uploadChat, handleSingleUpload('chat'));
 
 // Review image upload
-router.post('/review', uploadReview, handleSingleUpload(null, 'reviews'));
+router.post('/review', uploadReview, handleSingleUpload('reviews'));
 
 module.exports = router;

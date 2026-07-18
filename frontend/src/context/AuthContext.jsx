@@ -3,8 +3,23 @@
  * Context untuk manajemen state autentikasi di frontend
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/authAPI';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import firebaseConfig from '../config/firebase';
+
+// Initialize Firebase
+let firebaseApp;
+let firebaseAuth;
+
+try {
+  firebaseApp = initializeApp(firebaseConfig);
+  firebaseAuth = getAuth(firebaseApp);
+} catch (e) {
+  // Firebase already initialized
+  firebaseAuth = getAuth();
+}
 
 // Create auth context
 const AuthContext = createContext(null);
@@ -14,20 +29,80 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
 
-  // Fetch user profile saat aplikasi dimuat
+  // Sync Firebase auth state with context
   useEffect(() => {
-    checkAuth();
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+      setFirebaseUser(firebaseUser);
+      
+      // If Firebase user exists but no JWT token, get Firebase ID token and sync with backend
+      if (firebaseUser) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          // JWT exists, verify with backend
+          try {
+            const response = await authAPI.me();
+            const data = response.data || response;
+            if (data.success && data.user) {
+              setUser(data.user);
+            } else {
+              // Token invalid, clear it
+              localStorage.removeItem('token');
+              setUser(null);
+            }
+          } catch (error) {
+            localStorage.removeItem('token');
+            setUser(null);
+          }
+        } else {
+          // No JWT but Firebase user exists - means user logged in via Firebase elsewhere
+          // Get the ID token and sync with backend
+          try {
+            const idToken = await firebaseUser.getIdToken();
+            if (idToken) {
+              const response = await authAPI.googleLogin(idToken);
+              const data = response.data || response;
+              if (data.success && data.token) {
+                localStorage.setItem('token', data.token);
+                setUser(data.user);
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to sync Firebase user with backend:', error);
+          }
+        }
+      } else {
+        // No Firebase user - check if we have a JWT token
+        const savedToken = localStorage.getItem('token');
+        if (savedToken) {
+          try {
+            const response = await authAPI.me();
+            const data = response.data || response;
+            if (data.success && data.user) {
+              setUser(data.user);
+            } else {
+              localStorage.removeItem('token');
+              setUser(null);
+            }
+          } catch (error) {
+            localStorage.removeItem('token');
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+      
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  // TODO:
-  // Session Management.
-
-  // TODO:
-  // Refresh Token Flow (placeholder).
-
   // Cek status autentikasi
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -50,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Login
   const login = async (credentials) => {
@@ -82,12 +157,16 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authAPI.register(userData);
-      if (response.success) {
-        setUser(response.user);
+      const data = response.data || response;
+      if (data.success) {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        setUser(data.user);
         return { success: true };
       } else {
-        setError(response.message);
-        return { success: false, message: response.message };
+        setError(data.message);
+        return { success: false, message: data.message };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Terjadi kesalahan saat registrasi';
@@ -98,12 +177,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // TODO:
-  // Google Login Flow.
-
-  // Google Login - redirect ke backend
-  const googleLogin = () => {
-    authAPI.googleLogin();
+  // Google Login - Firebase based
+  const googleLogin = async (idToken) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!idToken) {
+        throw new Error('ID token diperlukan');
+      }
+      const response = await authAPI.googleLogin(idToken);
+      const data = response.data || response;
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        return { success: true };
+      } else {
+        setError(data.message);
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Terjadi kesalahan saat login Google';
+      setError(message);
+      return { success: false, message };
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Logout
@@ -111,28 +209,45 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       await authAPI.logout();
-      setUser(null);
     } catch (error) {
-      // Tetap hapus user di frontend meskipun backend error
-      setUser(null);
+      // Continue with frontend logout even if backend fails
     } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('loginSuccess');
+      // Sign out from Firebase too
+      if (firebaseAuth) {
+        try {
+          await firebaseAuth.signOut();
+        } catch (e) {
+          // Firebase signout failed, continue
+        }
+      }
       setLoading(false);
     }
   };
 
-  // TODO:
-  // Error Handling.
-
   // Refresh session
   const refreshSession = async () => {
-    // TODO: Refresh Token Flow (placeholder).
-    // TODO: Panggil endpoint refresh token.
+    // Try to refresh by calling /me endpoint
+    try {
+      const response = await authAPI.me();
+      const data = response.data || response;
+      if (data.success && data.user) {
+        setUser(data.user);
+        return { success: true };
+      }
+    } catch (error) {
+      // Silent fail
+    }
+    return { success: false };
   };
 
   const value = {
     user,
     loading,
     error,
+    firebaseUser,
     login,
     register,
     googleLogin,

@@ -5,6 +5,10 @@
 
 const { auth, admin, db } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
+const User = require('../../models/User');
+
+// Use global fetch (Node.js 18+) or fallback to node-fetch
+const fetch = global.fetch || require('node-fetch');
 
 // Generate JWT token for session
 const generateToken = (user) => {
@@ -53,16 +57,42 @@ const register = async (req, res) => {
     }
     
     // Buat user di Firebase Auth
-    const userRecord = await auth.createUser({
-      email,
-      password,
-      displayName: fullName,
-    });
+    let userRecord;
+    try {
+      userRecord = await auth.getUserByEmail(email);
+      return res.status(409).json({
+        success: false,
+        message: 'Email sudah terdaftar'
+      });
+    } catch (error) {
+      // User doesn't exist, create new
+      userRecord = await auth.createUser({
+        email,
+        password,
+        displayName: fullName,
+      });
+    }
     
     // Set custom claims untuk role
     if (role) {
       await auth.setCustomUserClaims(userRecord.uid, { role });
     }
+    
+    // Create user in MongoDB
+    await User.findOneAndUpdate(
+      { uid: userRecord.uid },
+      {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        fullName: userRecord.displayName || fullName,
+        username: username || '',
+        phone: phone || '',
+        role: role || 'user',
+        status: 'active',
+        lastLoginAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
     
     // Generate JWT token
     const token = generateToken({
@@ -77,7 +107,7 @@ const register = async (req, res) => {
       user: {
         uid: userRecord.uid,
         email: userRecord.email,
-        fullName: userRecord.displayName,
+        fullName: userRecord.displayName || fullName,
         role: role || 'user'
       },
       token
@@ -89,6 +119,7 @@ const register = async (req, res) => {
         message: 'Email sudah terdaftar'
       });
     }
+    console.error('Register error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -160,6 +191,20 @@ const login = async (req, res) => {
           role: devUser.role
         });
 
+        // Create user in MongoDB if not exists
+        await User.findOneAndUpdate(
+          { uid: devUser.uid },
+          {
+            uid: devUser.uid,
+            email: devUser.email,
+            fullName: devUser.fullName,
+            role: devUser.role,
+            status: 'active',
+            lastLoginAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+
         return res.json({
           success: true,
           message: 'Login berhasil',
@@ -198,11 +243,6 @@ const login = async (req, res) => {
       });
     }
     
-    // Verify password using Firebase Admin
-    // Note: Firebase Admin doesn't have direct password verification
-    // We need to use Firebase client SDK or verify via token
-    // For now, use a stub approach - in production use Firebase Auth REST API
-    
     // Get user custom claims
     const { role = 'user' } = (userRecord.customClaims || {});
     
@@ -219,6 +259,20 @@ const login = async (req, res) => {
       lastLoginAt: Date.now()
     });
     
+    // Update user in MongoDB
+    await User.findOneAndUpdate(
+      { uid: userRecord.uid },
+      {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        fullName: userRecord.displayName || email,
+        role: role,
+        status: 'active',
+        lastLoginAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
     res.json({
       success: true,
       message: 'Login berhasil',
@@ -240,31 +294,128 @@ const login = async (req, res) => {
 };
 
 /**
- * Google Login - Redirect ke Google OAuth
- * @route GET /api/auth/google
+ * Firebase Google Login - Verify Firebase ID Token
+ * Frontend handles Google OAuth with Firebase SDK, backend only verifies token
+ * @route POST /api/auth/google
  */
 const googleLogin = async (req, res) => {
   try {
-    const { GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI } = process.env;
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID token diperlukan'
+      });
+    }
     
     // Firebase Auth ready check
-    if (!auth || !admin) {
+    if (!auth) {
       return res.status(503).json({
         success: false,
         message: 'Firebase Auth belum dikonfigurasi'
       });
     }
     
-    // Construct Google OAuth URL
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI || `${process.env.CORS_ORIGIN}/auth/google/callback`)}&` +
-      `response_type=code&` +
-      `scope=${encodeURIComponent('openid email profile')}&` +
-      `access_type=offline&` +
-      `prompt=consent`;
+    // Verify Firebase ID token
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(idToken);
+    } catch (verifyError) {
+      console.error('Firebase token verification failed:', verifyError.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Token Firebase tidak valid'
+      });
+    }
     
-    res.redirect(googleAuthUrl);
+    const { uid, email, name, picture } = decodedToken;
+    
+    // Check if user exists in Firebase
+    let userRecord;
+    try {
+      userRecord = await auth.getUser(uid);
+    } catch (error) {
+      // Create user if not exists
+      userRecord = await auth.createUser({
+        uid,
+        email,
+        displayName: name || email,
+        photoURL: picture,
+        emailVerified: true
+      });
+    }
+    
+    // Get or determine user role
+    let role = 'user';
+    let mongoUser = null;
+    
+    // Check if user exists in MongoDB first (with fallback)
+    try {
+      mongoUser = await User.findOne({ uid });
+    } catch (mongoError) {
+      console.warn('MongoDB lookup failed, continuing without DB:', mongoError.message);
+    }
+    
+    if (!mongoUser && User) {
+      try {
+        // Create new user in MongoDB
+        mongoUser = await User.create({
+          uid,
+          email,
+          fullName: name || email,
+          photoURL: picture || '/gambar/avatar/default.png',
+          role: 'user',
+          status: 'active',
+          lastLoginAt: new Date(),
+          createdAt: new Date()
+        });
+      } catch (mongoCreateError) {
+        console.warn('MongoDB create failed, continuing without DB:', mongoCreateError.message);
+      }
+    }
+    
+    // Update last login and other info if MongoDB available
+    if (mongoUser) {
+      try {
+        mongoUser.lastLoginAt = new Date();
+        if (name) mongoUser.fullName = name;
+        if (picture) mongoUser.photoURL = picture;
+        await mongoUser.save();
+        // Use role from MongoDB if available
+        if (mongoUser.role) {
+          role = mongoUser.role;
+        }
+      } catch (mongoUpdateError) {
+        console.warn('MongoDB update failed:', mongoUpdateError.message);
+      }
+    }
+    
+    // Generate JWT token
+    const token = generateToken({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      fullName: userRecord.displayName || email,
+      role
+    });
+    
+    // Update last login in Firebase
+    await auth.updateUser(userRecord.uid, {
+      lastLoginAt: Date.now()
+    });
+
+    res.json({
+      success: true,
+      message: 'Login Google berhasil',
+      user: {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        fullName: userRecord.displayName || email,
+        photoURL: userRecord.photoURL || mongoUser?.photoURL,
+        role
+      },
+      token
+    });
   } catch (error) {
     console.error('Google login error:', error.message);
     res.status(500).json({
@@ -349,12 +500,48 @@ const googleCallback = async (req, res) => {
       });
     }
     
+    // Determine role - default to 'user'
+    let role = 'user';
+    let mongoUser = null;
+    
+    // Check or create user in MongoDB (with fallback)
+    if (User) {
+      try {
+        mongoUser = await User.findOne({ uid: googleUser.sub });
+        
+        if (!mongoUser) {
+          mongoUser = await User.create({
+            uid: googleUser.sub,
+            email: googleUser.email,
+            fullName: googleUser.name || googleUser.email,
+            photoURL: googleUser.picture || '/gambar/avatar/default.png',
+            role: 'user',
+            status: 'active',
+            lastLoginAt: new Date(),
+            createdAt: new Date()
+          });
+        } else {
+          mongoUser.lastLoginAt = new Date();
+          if (googleUser.name) mongoUser.fullName = googleUser.name;
+          if (googleUser.picture) mongoUser.photoURL = googleUser.picture;
+          await mongoUser.save();
+        }
+        
+        // Use role from MongoDB
+        if (mongoUser && mongoUser.role) {
+          role = mongoUser.role;
+        }
+      } catch (mongoError) {
+        console.warn('MongoDB operation failed, continuing without DB:', mongoError.message);
+      }
+    }
+    
     // Generate JWT token
     const token = generateToken({
       uid: userRecord.uid,
       email: userRecord.email,
       fullName: userRecord.displayName || googleUser.email,
-      role: 'user' // Default role, can be updated based on database
+      role
     });
     
     // Update last login
@@ -423,37 +610,63 @@ const getMe = async (req, res) => {
       });
     }
     
-    // Get user from Firebase if available
-    if (auth) {
+    // Try to get user from MongoDB first
+    let userData = null;
+    try {
+      const mongoUser = await User.findOne({ uid: decoded.uid });
+      if (mongoUser) {
+        userData = {
+          uid: mongoUser.uid,
+          email: mongoUser.email,
+          fullName: mongoUser.fullName,
+          role: mongoUser.role,
+          status: mongoUser.status,
+          photoURL: mongoUser.photoURL,
+          phone: mongoUser.phone,
+          balance: mongoUser.balance
+        };
+      }
+    } catch (mongoError) {
+      console.warn('MongoDB user lookup failed:', mongoError.message);
+    }
+    
+    // Fallback to Firebase if MongoDB not available
+    if (!userData && auth) {
       try {
         const userRecord = await auth.getUser(decoded.uid);
-        const customClaims = userRecord.customClaims || {};
-        
-        return res.json({
-          success: true,
-          user: {
-            uid: decoded.uid,
-            email: userRecord.email || decoded.email,
-            fullName: userRecord.displayName || decoded.fullName,
-            role: customClaims.role || decoded.role || 'user',
-            photoURL: userRecord.photoURL || null
-          }
-        });
+        userData = {
+          uid: decoded.uid,
+          email: userRecord.email || decoded.email,
+          fullName: userRecord.displayName || decoded.fullName,
+          role: (userRecord.customClaims?.role) || decoded.role || 'user',
+          photoURL: userRecord.photoURL
+        };
       } catch (firebaseError) {
         // Firebase user not found, return decoded token data
+        userData = {
+          uid: decoded.uid,
+          email: decoded.email,
+          fullName: decoded.fullName || decoded.email,
+          role: decoded.role || 'user'
+        };
       }
     }
     
-    res.json({
-      success: true,
-      user: {
+    if (!userData) {
+      userData = {
         uid: decoded.uid,
         email: decoded.email,
         fullName: decoded.fullName || decoded.email,
         role: decoded.role || 'user'
-      }
+      };
+    }
+
+    res.json({
+      success: true,
+      user: userData
     });
   } catch (error) {
+    console.error('getMe error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -574,7 +787,26 @@ const registerReseller = async (req, res) => {
       });
     }
     
-    // Update user role to reseller
+    // Update user role to reseller in MongoDB
+    if (User) {
+      try {
+        await User.findOneAndUpdate(
+          { uid: decoded.uid },
+          { 
+            role: 'reseller',
+            status: 'active',
+            'resellerInfo.bankAccount': bank_account,
+            'resellerInfo.accountHolderName': account_holder_name,
+            'resellerInfo.resellerStatus': 'pending'
+          },
+          { upsert: true }
+        );
+      } catch (mongoError) {
+        console.error('MongoDB update error:', mongoError.message);
+      }
+    }
+    
+    // Update user role to reseller in Firebase
     if (auth) {
       try {
         await auth.setCustomUserClaims(decoded.uid, { role: 'reseller' });
@@ -583,7 +815,7 @@ const registerReseller = async (req, res) => {
       }
     }
     
-    // TODO: Save reseller info to database
+    // TODO: Save reseller info to storage
     
     res.json({
       success: true,
@@ -624,18 +856,27 @@ const getResellerStatus = async (req, res) => {
       });
     }
     
-    // Get user role from Firebase
-    if (auth) {
+    // Get user from MongoDB first
+    let role = 'user';
+    let status = 'active';
+    
+    if (User) {
+      try {
+        const mongoUser = await User.findOne({ uid: decoded.uid });
+        if (mongoUser) {
+          role = mongoUser.role;
+          status = mongoUser.status;
+        }
+      } catch (mongoError) {
+        // Continue with Firebase fallback
+      }
+    }
+    
+    // Fallback to Firebase if MongoDB not found
+    if (auth && role === 'user') {
       try {
         const userRecord = await auth.getUser(decoded.uid);
-        const role = (userRecord.customClaims?.role) || 'user';
-        
-        return res.json({
-          success: true,
-          isReseller: role === 'reseller' || role === 'admin',
-          status: 'active',
-          role
-        });
+        role = (userRecord.customClaims?.role) || 'user';
       } catch (firebaseError) {
         // User not found in Firebase
       }
@@ -643,9 +884,9 @@ const getResellerStatus = async (req, res) => {
     
     res.json({
       success: true,
-      isReseller: false,
-      status: 'active',
-      role: decoded.role || 'user'
+      isReseller: role === 'reseller' || role === 'admin',
+      status,
+      role
     });
   } catch (error) {
     res.status(500).json({

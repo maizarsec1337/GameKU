@@ -4,6 +4,21 @@ import { authAPI } from '../services/authAPI';
 import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import firebaseConfig from '../config/firebase';
+
+// Initialize Firebase
+let firebaseApp;
+let firebaseAuth;
+
+try {
+  firebaseApp = initializeApp(firebaseConfig);
+  firebaseAuth = getAuth(firebaseApp);
+} catch (e) {
+  // Firebase already initialized
+  firebaseAuth = getAuth();
+}
 
 function Login() {
   const navigate = useNavigate();
@@ -17,6 +32,9 @@ function Login() {
   const [errors, setErrors] = useState({});
   const [rememberMe, setRememberMe] = useState(false);
   const [authProcessing, setAuthProcessing] = useState(false);
+
+  // Get checkAuth and user from context
+  const { checkAuth, user } = useAuth();
 
   useEffect(() => {
     // Handle Google OAuth callback
@@ -33,8 +51,9 @@ function Login() {
           
           // Get user info
           const response = await authAPI.me();
-          if (response.success && response.user) {
-            const role = response.user.role;
+          const data = response.data || response;
+          if (data.success && data.user) {
+            const role = data.user.role;
             
             // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -45,13 +64,13 @@ function Login() {
             } else if (role === 'reseller') {
               navigate('/reseller', { replace: true });
             } else {
-              navigate('/', { replace: true });
+              navigate('/user', { replace: true });
             }
           } else {
             setErrors({ submit: 'Gagal mendapatkan data user' });
           }
         } catch (error) {
-          setErrors({ submit: error.response?.data?.message || 'Autentikasi Google gagal' });
+          setErrors({ submit: error.response?.data?.message || error.message || 'Autentikasi Google gagal' });
         } finally {
           setAuthProcessing(false);
         }
@@ -64,24 +83,26 @@ function Login() {
   useEffect(() => {
     // Check if user is already logged in (only if not processing callback)
     if (!authProcessing && !sessionStorage.getItem('loginSuccess')) {
-      const checkAuth = async () => {
+      const checkAuthStatus = async () => {
         try {
           const response = await authAPI.me();
-          if (response.data && response.data.success) {
-            const role = response.data.user.role;
+          const data = response.data || response;
+          if (data.success && data.user) {
+            const role = data.user.role;
+            // Only redirect if user exists, otherwise stay on login
             if (role === 'admin') {
               navigate('/admin', { replace: true });
             } else if (role === 'reseller') {
               navigate('/reseller', { replace: true });
             } else {
-              navigate('/', { replace: true });
+              navigate('/user', { replace: true });
             }
           }
         } catch (error) {
           // User not authenticated, stay on login page
         }
       };
-      checkAuth();
+      checkAuthStatus();
     }
   }, [navigate, authProcessing]);
 
@@ -104,9 +125,6 @@ function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Dapatkan checkAuth dari context
-  const { checkAuth } = useAuth();
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -115,21 +133,23 @@ function Login() {
     setLoading(true);
     try {
       const response = await authAPI.login(formData);
-      if (response && response.success) {
-        // Simpan token
-        localStorage.setItem('token', response.token);
+      const data = response.data || response;
+      if (data && data.success && data.token) {
+        // Store token
+        localStorage.setItem('token', data.token);
         // Update user state di context
         await checkAuth();
-        // Redirect based on role
-        if (response.user.role === 'admin') {
+        // Redirect based on role - use data from response to avoid race condition
+        const role = data.user.role;
+        if (role === 'admin') {
           navigate('/admin', { replace: true });
-        } else if (response.user.role === 'reseller') {
+        } else if (role === 'reseller') {
           navigate('/reseller', { replace: true });
         } else {
-          navigate('/', { replace: true });
+          navigate('/user', { replace: true });
         }
       } else {
-        setErrors({ submit: response?.message || 'Login gagal' });
+        setErrors({ submit: data?.message || 'Login gagal' });
       }
     } catch (error) {
       setErrors({ submit: error.response?.data?.message || 'Terjadi kesalahan saat login' });
@@ -138,9 +158,52 @@ function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Redirect to backend Google OAuth endpoint
-    window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/google`;
+  const handleGoogleLogin = async () => {
+    setAuthProcessing(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      
+      const result = await signInWithPopup(firebaseAuth, provider);
+      const idToken = await result.user.getIdToken();
+      
+      // Send ID token to backend for verification
+      const response = await authAPI.googleLogin(idToken);
+      const data = response.data || response;
+      
+      if (data && data.success && data.token) {
+        // Store token
+        localStorage.setItem('token', data.token);
+        sessionStorage.setItem('loginSuccess', 'true');
+        
+        // Update user state via context
+        await checkAuth();
+        
+        // Redirect based on role - use data from response to avoid race condition
+        const role = data.user.role;
+        if (role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else if (role === 'reseller') {
+          navigate('/reseller', { replace: true });
+        } else {
+          navigate('/user', { replace: true });
+        }
+      } else {
+        setErrors({ submit: data?.message || 'Login Google gagal' });
+      }
+    } catch (error) {
+      console.error('Google login popup error:', error);
+      if (error.code === 'auth/popup-blocked') {
+        setErrors({ submit: 'Popup diblokir. Silakan izinkan popup di browser Anda.' });
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setErrors({ submit: 'Login Google dibatalkan' });
+      } else if (error.response?.data?.message) {
+        setErrors({ submit: error.response.data.message });
+      } else {
+        setErrors({ submit: 'Login Google gagal. Silakan coba lagi.' });
+      }
+    } finally {
+      setAuthProcessing(false);
+    }
   };
 
   const handleChange = (e) => {

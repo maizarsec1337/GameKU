@@ -26,16 +26,11 @@ function Contact() {
             <p className="section-subtitle">Tim kami siap membantu kamu 24/7</p>
           </div>
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+            <div style={{ maxWidth: 400, margin: '0 auto', marginBottom: 32 }}>
               <div className="feature-card" style={{ textAlign: 'center', padding: 24 }}>
                 <div className="feature-icon" style={{ margin: '0 auto 12px' }}>📧</div>
                 <h3 style={{ fontSize: 'var(--font-sm)', marginBottom: 4 }}>Email</h3>
-                <p style={{ fontSize: 'var(--font-sm)', color: 'var(--gray)' }}>support@gameku.com</p>
-              </div>
-              <div className="feature-card" style={{ textAlign: 'center', padding: 24 }}>
-                <div className="feature-icon" style={{ margin: '0 auto 12px' }}>📞</div>
-                <h3 style={{ fontSize: 'var(--font-sm)', marginBottom: 4 }}>Telepon</h3>
-                <p style={{ fontSize: 'var(--font-sm)', color: 'var(--gray)' }}>+62 812-3456-7890</p>
+                <p style={{ fontSize: 'var(--font-sm)', color: 'var(--gray)' }}>support@gameku.store</p>
               </div>
             </div>
             <form onSubmit={(e) => e.preventDefault()} style={{ background: 'white', padding: 32, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)' }}>

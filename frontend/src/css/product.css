@@ -9,6 +9,7 @@
   padding-top: 80px;
   padding-bottom: var(--space-4xl);
   color: #e8e8e8;
+  overflow-x: hidden;
 }
 
 .product-detail .container {
@@ -44,12 +45,19 @@
   font-weight: 600;
 }
 
-/* Layout 2 kolom (70% / 30%) */
+/* Layout 2 kolom (60-65% / 35-40%) */
 .pd-layout {
   display: grid;
-  grid-template-columns: 7fr 3fr;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--space-2xl);
   align-items: start;
+}
+
+/* Responsive width for right column */
+@media (min-width: 1025px) and (max-width: 1200px) {
+  .pd-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
 }
 
 .pd-left {
@@ -59,6 +67,7 @@
 .pd-right {
   position: sticky;
   top: 96px;
+  align-self: start;
 }
 
 /* ====================
@@ -72,10 +81,11 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* Main image - max-height 500-550px with object-fit: cover */
 .pd-main-image {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  max-height: 540px;
   border-radius: 12px;
   overflow: hidden;
   background: #0f0f0f;
@@ -85,8 +95,9 @@
 
 .pd-main-image img {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
+  max-height: 540px;
+  object-fit: cover;
   transition: transform var(--transition-base);
 }
 
@@ -127,7 +138,7 @@
 .pd-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .pd-thumb:hover {
@@ -355,7 +366,7 @@
 }
 
 /* ====================
-   PURCHASE CARD (sticky kanan)
+   PURCHASE CARD (sticky kanan) - fit-content height
    ==================== */
 .pd-buy-card {
   background: #1b1b1b;
@@ -363,6 +374,7 @@
   border-radius: 16px;
   padding: var(--space-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  height: fit-content;
 }
 
 .pd-buy-name {
@@ -403,7 +415,7 @@
   border-radius: 20px;
 }
 
-/* Nominal pilihan */
+/* Nominal pilihan - uniform height */
 .pd-field-label {
   font-size: var(--font-xs);
   color: var(--gray-2);
@@ -431,6 +443,9 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  justify-content: center;
+  min-height: 60px;
+  height: fit-content;
 }
 
 .pd-nominal:hover {
@@ -447,15 +462,17 @@
   font-size: var(--font-sm);
   font-weight: 600;
   color: #fff;
+  line-height: 1.2;
 }
 
 .pd-nominal-price {
   font-size: var(--font-xs);
   color: var(--primary);
   font-weight: 700;
+  line-height: 1.2;
 }
 
-/* Quantity */
+/* Quantity - aligned with nominal card height */
 .pd-qty-row {
   display: flex;
   align-items: center;
@@ -469,6 +486,7 @@
   border: 1px solid rgba(255, 215, 0, 0.15);
   border-radius: 10px;
   overflow: hidden;
+  height: 38px;
 }
 
 .pd-qty-btn {
@@ -499,9 +517,10 @@
   font-size: var(--font-base);
   font-weight: 700;
   color: #fff;
+  line-height: 38px;
 }
 
-/* Total */
+/* Total - aligned subtotal and price */
 .pd-total-row {
   display: flex;
   align-items: center;
@@ -530,17 +549,24 @@
   gap: var(--space-sm);
 }
 
+/* Tombol Beli Sekarang - proper height 52-60px with centered logo */
 .pd-btn-buy {
   background: var(--gradient-primary);
   color: #0a0a0a;
   font-weight: 800;
   border-radius: 12px;
-  padding: 14px;
+  padding: 0 var(--space-md);
   font-size: var(--font-base);
   border: none;
   cursor: pointer;
   transition: all var(--transition-base);
   box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+  height: 56px;
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
 }
 
 .pd-btn-buy:hover {
@@ -548,16 +574,28 @@
   box-shadow: 0 6px 28px rgba(255, 215, 0, 0.55);
 }
 
+.pd-btn-buy svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .pd-btn-cart {
   background: #0f0f0f;
   color: var(--primary);
   border: 1px solid var(--primary);
   border-radius: 12px;
-  padding: 14px;
+  padding: 0 var(--space-md);
   font-size: var(--font-base);
   font-weight: 700;
   cursor: pointer;
   transition: all var(--transition-base);
+  height: 52px;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
 }
 
 .pd-btn-cart:hover {
@@ -573,12 +611,14 @@
   background: #0f0f0f;
   border: 1px solid rgba(255, 215, 0, 0.15);
   border-radius: 12px;
-  padding: 13px;
+  padding: 0 var(--space-md);
   color: var(--gray-2);
   font-size: var(--font-base);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-base);
+  height: 44px;
+  min-height: 44px;
 }
 
 .pd-btn-secondary:hover {
@@ -644,6 +684,7 @@
   padding: var(--space-lg);
   margin-top: var(--space-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  height: fit-content;
 }
 
 .pd-chat-card-head,
@@ -808,7 +849,6 @@
   justify-content: center;
   gap: 8px;
   border-radius: 12px;
-  padding: 13px;
   font-size: var(--font-base);
   font-weight: 700;
   cursor: pointer;
@@ -820,6 +860,8 @@
   background: var(--gradient-primary);
   color: #0a0a0a;
   box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+  height: 52px;
+  min-height: 52px;
 }
 
 .pd-btn-chat-seller:hover {
@@ -831,6 +873,8 @@
   background: #0f0f0f;
   color: var(--primary);
   border: 1px solid var(--primary);
+  height: 52px;
+  min-height: 52px;
 }
 
 .pd-btn-chat-cs:hover {
@@ -1180,6 +1224,19 @@
   scroll-behavior: smooth;
   padding-bottom: var(--space-sm);
   -webkit-overflow-scrolling: touch;
+  margin-left: calc(-1 * var(--container-padding));
+  margin-right: calc(-1 * var(--container-padding));
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
+}
+
+@media (max-width: 600px) {
+  .pd-horizontal-scroll {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
 }
 
 .pd-horizontal-scroll::-webkit-scrollbar {
@@ -1223,7 +1280,7 @@
 .pd-horizontal-img img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .pd-horizontal-body {
@@ -1247,7 +1304,7 @@
 }
 
 /* ====================
-   REVIEW
+   REVIEW - Enhanced UI
    ==================== */
 .pd-review-summary {
   display: flex;
@@ -1277,6 +1334,49 @@
   color: var(--gray-2);
 }
 
+/* Rating distribution bar */
+.pd-rating-bar {
+  flex: 1;
+  min-width: 200px;
+}
+
+.pd-rating-bar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.pd-rating-bar-label {
+  font-size: var(--font-xs);
+  color: var(--gray-2);
+  width: 24px;
+  text-align: right;
+}
+
+.pd-rating-bar-track {
+  flex: 1;
+  height: 6px;
+  background: #0f0f0f;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pd-rating-bar-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 3px;
+  transition: width var(--transition-base);
+}
+
+.pd-rating-bar-percent {
+  font-size: var(--font-xs);
+  color: var(--primary);
+  font-weight: 600;
+  width: 36px;
+  text-align: left;
+}
+
 .pd-review-list {
   display: flex;
   flex-direction: column;
@@ -1288,6 +1388,11 @@
   border: 1px solid rgba(255, 215, 0, 0.15);
   border-radius: 16px;
   padding: var(--space-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.pd-review-item:hover {
+  border-color: rgba(255, 215, 0, 0.3);
 }
 
 .pd-review-head {
@@ -1298,8 +1403,8 @@
 }
 
 .pd-review-avatar {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
   background: #0f0f0f;
@@ -1328,6 +1433,75 @@
   font-size: var(--font-sm);
   line-height: 1.7;
   color: var(--gray-2);
+  margin-bottom: var(--space-md);
+}
+
+.pd-review-seller-reply {
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.12);
+  border-radius: 12px;
+  padding: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.pd-review-seller-reply-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-xs);
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: var(--space-xs);
+}
+
+.pd-review-seller-reply-head svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pd-review-seller-reply-text {
+  font-size: var(--font-sm);
+  color: var(--gray-3);
+  line-height: 1.6;
+}
+
+.pd-review-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(255, 215, 0, 0.08);
+}
+
+.pd-review-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: var(--font-xs);
+  color: var(--gray-2);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pd-review-like-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pd-review-like-btn.liked {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.pd-review-like-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ====================
@@ -1364,6 +1538,15 @@
 
   .pd-title {
     font-size: var(--font-2xl);
+  }
+
+  .pd-review-summary {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .pd-rating-bar {
+    width: 100%;
   }
 }
 

@@ -12,7 +12,7 @@ const app = express();
 // STORAGE SETUP
 // ====================
 
-const STORAGE_BASE = path.join(__dirname, 'storage');
+const STORAGE_BASE = path.join(__dirname, '..', 'storage');
 const STORAGE_DIRS = [
   'products', 'users', 'reseller', 'ktp', 'selfie', 
   'documents', 'avatars', 'banners', 'promos', 'vouchers', 
@@ -20,12 +20,16 @@ const STORAGE_DIRS = [
 ];
 
 // Initialize storage directories
-STORAGE_DIRS.forEach(dir => {
-  const dirPath = path.join(STORAGE_BASE, dir);
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-});
+const initializeStorageDirs = () => {
+  STORAGE_DIRS.forEach(dir => {
+    const dirPath = path.join(STORAGE_BASE, dir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  });
+};
+
+initializeStorageDirs();
 
 // Serve storage files statically
 app.use('/storage', express.static(STORAGE_BASE, {
@@ -134,9 +138,9 @@ app.use(morgan('dev'));
 
 const rateLimit = require('express-rate-limit');
 
-// Login rate limiter - 20 requests per 1 minute (removed slowdown)
+// Login rate limiter - 20 requests per 1 minute
 const loginRateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
+  windowMs: 1 * 60 * 1000,
   max: 20,
   message: { success: false, message: 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.' },
   standardHeaders: true,
@@ -160,21 +164,29 @@ const apiRateLimiter = rateLimit({
 // API ROUTES
 // ====================
 
-const bannerRoutes = require('./api/routes/banner');
-const categoryRoutes = require('./api/routes/category');
-const gameRoutes = require('./api/routes/game');
-const voucherRoutes = require('./api/routes/voucher');
-const promoRoutes = require('./api/routes/promo');
-const searchRoutes = require('./api/routes/search');
-const authRoutes = require('./api/routes/auth');
-const adminRoutes = require('./api/routes/admin');
-const resellerRoutes = require('./api/routes/reseller');
-const uploadRoutes = require('./api/routes/upload');
+// Import routes with error handling
+let bannerRoutes, categoryRoutes, gameRoutes, voucherRoutes, promoRoutes, searchRoutes, authRoutes, adminRoutes, resellerRoutes, uploadRoutes;
 
-// Apply rate limiting to auth routes (login only, no slowdown)
-app.use('/api/auth/login', loginRateLimiter);
-app.use('/api/auth/google/callback', loginRateLimiter);
-app.use('/api/auth/forgot-password', forgotPasswordRateLimiter);
+try {
+  bannerRoutes = require('./api/routes/banner');
+  categoryRoutes = require('./api/routes/category');
+  gameRoutes = require('./api/routes/game');
+  voucherRoutes = require('./api/routes/voucher');
+  promoRoutes = require('./api/routes/promo');
+  searchRoutes = require('./api/routes/search');
+  authRoutes = require('./api/routes/auth');
+  adminRoutes = require('./api/routes/admin');
+  resellerRoutes = require('./api/routes/reseller');
+  uploadRoutes = require('./api/routes/upload');
+} catch (error) {
+  console.error('Route import error:', error.message);
+  // Create fallback router
+  const fallbackRouter = express.Router();
+  fallbackRouter.use((req, res) => {
+    res.status(503).json({ success: false, message: 'Server sedang dalam pemeliharaan' });
+  });
+  bannerRoutes = categoryRoutes = gameRoutes = voucherRoutes = promoRoutes = searchRoutes = authRoutes = adminRoutes = resellerRoutes = uploadRoutes = fallbackRouter;
+}
 
 // Apply general API rate limiting
 app.use('/api/banner', apiRateLimiter, bannerRoutes);
@@ -183,10 +195,26 @@ app.use('/api/game', apiRateLimiter, gameRoutes);
 app.use('/api/voucher', apiRateLimiter, voucherRoutes);
 app.use('/api/promo', apiRateLimiter, promoRoutes);
 app.use('/api/search', apiRateLimiter, searchRoutes);
-app.use('/api/auth', apiRateLimiter, authRoutes);
 app.use('/api/admin', apiRateLimiter, adminRoutes);
 app.use('/api/reseller', apiRateLimiter, resellerRoutes);
 app.use('/api/upload', apiRateLimiter, uploadRoutes);
+
+// Auth routes with login rate limiting
+app.use('/api/auth', loginRateLimiter, authRoutes);
+
+// ====================
+// HEALTH CHECK
+// ====================
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 // ====================
 // FRONTEND STATIC
@@ -198,15 +226,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve gambar folder from public (for production assets)
 app.use('/gambar', express.static(path.join(__dirname, 'public', 'gambar')));
 
+// ====================
+// ERROR HANDLER
+// ====================
+
+// Handle 404 for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint tidak ditemukan'
+  });
+});
+
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ====================
-// ERROR HANDLER
-// ====================
-
+// General error handler
 app.use((err, req, res, next) => {
   console.error('Internal Error:', err);
   

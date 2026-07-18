@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import ProductCard from '../components/ProductCard';
 import ImageWithFallback from '../components/ImageWithFallback';
@@ -25,6 +26,7 @@ const apiService = {
 
 function Home() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -35,15 +37,16 @@ function Home() {
   const [giftCards, setGiftCards] = useState([]);
   const [promos, setPromos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
   const carouselRefs = {
-    topup: useRef(null),
-    steam: useRef(null),
-    minecraft: useRef(null),
-    voucher: useRef(null),
-    giftcard: useRef(null),
-    promo: useRef(null),
-    banner: useRef(null)
+    topup: React.useRef(null),
+    steam: React.useRef(null),
+    minecraft: React.useRef(null),
+    voucher: React.useRef(null),
+    giftcard: React.useRef(null),
+    promo: React.useRef(null),
+    banner: React.useRef(null)
   };
 
   // State untuk mode "Lihat Semua" (carousel <-> grid) per section
@@ -168,6 +171,11 @@ function Home() {
   // NAVBAR
   // ====================
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   const renderNavbar = () => (
     <nav className="navbar">
       <div className="container">
@@ -190,26 +198,38 @@ function Home() {
           <button className="btn-icon" aria-label="Search" onClick={() => navigate('/search')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
 
           <button className="btn-icon" aria-label="Cart">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" x2="21" />
               <path d="M16 10a4 4 0 01-8 0" />
             </svg>
             <span className="cart-count">0</span>
           </button>
 
-          <Link to="/login" className="btn btn-primary btn-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>Masuk</span>
-          </Link>
+          {user ? (
+            <div className="user-menu">
+              <Link to={user.role === 'admin' ? '/admin' : user.role === 'reseller' ? '/reseller' : '/user'} className="btn btn-primary btn-sm">
+                <span>👤</span>
+                <span className="user-name">{user.fullName || user.email}</span>
+              </Link>
+              <button onClick={handleLogout} className="btn btn-outline btn-sm" style={{ marginLeft: '8px' }}>
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="btn btn-primary btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Masuk</span>
+            </Link>
+          )}
 
           <button
             className={`navbar-hamburger ${menuOpen ? 'active' : ''}`}
@@ -224,6 +244,19 @@ function Home() {
   );
 
   // ====================
+  // BANNER AUTO SLIDE
+  // ====================
+
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
+
+  // ====================
   // BANNER CAROUSEL
   // ====================
 
@@ -232,11 +265,29 @@ function Home() {
       <div className="container">
         <div className="banner-carousel" ref={carouselRefs.banner}>
           {banners.length > 0 ? (
-            banners.map((banner, index) => (
-              <div className="banner-slide" key={banner._id || banner.id || index}>
-                <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} />
+            <>
+              <div className="banner-slider" style={{
+                display: 'flex',
+                transform: `translateX(-${currentBannerIndex * 100}%)`,
+                transition: 'transform 0.5s ease-in-out',
+                width: '100%'
+              }}>
+                {banners.map((banner, index) => (
+                  <div className="banner-slide" key={banner._id || banner.id || index}>
+                    <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} />
+                  </div>
+                ))}
               </div>
-            ))
+              <div className="banner-indicators">
+                {banners.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`banner-indicator ${index === currentBannerIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentBannerIndex(index)}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="loading-state" style={{ height: '180px' }}>Memuat banner...</div>
           )}
@@ -295,7 +346,7 @@ function Home() {
               >
                 <span>{isExpanded ? 'Tampilkan Lebih Sedikit' : 'Lihat Semua'}</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <line x1="5" y1="12" />
                   <polyline points={isExpanded ? '12 19 5 12 12 5' : '12 5 19 12 12 19'} />
                 </svg>
               </button>
@@ -307,16 +358,16 @@ function Home() {
               {data.length > 0 ? (
                 data.map((item) => (
                  <ProductCard
-                     key={item.id || item._id}
-                     id={item.id || item._id}
-                     name={item.name}
-                     image={item.image}
-                     price={item.price || 'Rp0'}
-                     category={item.category}
-                     platform={item.category}
-                     originalPrice={item.originalPrice}
-                     discount={item.discount}
-                   />
+                      key={item.id || item._id}
+                      id={item.id || item._id}
+                      name={item.name}
+                      image={item.image}
+                      price={item.price || 'Rp0'}
+                      category={item.category}
+                      platform={item.category}
+                      originalPrice={item.originalPrice}
+                      discount={item.discount}
+                    />
                 ))
               ) : (
                 <div className="empty-state">Tidak ada produk tersedia</div>
@@ -452,7 +503,7 @@ function Home() {
             <Link to="/promo" className="btn-view-all">
               <span>Lihat Semua</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
+                <line x1="5" y1="12" />
                 <polyline points="12 5 19 12 12 19" />
               </svg>
             </Link>
@@ -550,14 +601,9 @@ function Home() {
 
           <div>
             <h4>Kontak</h4>
-            <ul>
-              <li><a href="mailto:support@gameku.com">support@gameku.com</a></li>
-              <li><a href="tel:+6281234567890">+62 812-3456-7890</a></li>
-              <li style={{ fontSize: 'var(--font-xs)', color: 'rgba(255,255,255,0.5)', marginTop: 'var(--space-md)' }}>
-                Senin - Sabtu<br />
-                09:00 - 21:00 WIB
-              </li>
-            </ul>
+              <ul>
+                <li><a href="mailto:support@gameku.store">support@gameku.store</a></li>
+              </ul>
           </div>
         </div>
 

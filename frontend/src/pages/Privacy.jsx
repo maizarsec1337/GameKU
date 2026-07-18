@@ -35,7 +35,7 @@ function Privacy() {
             <h3 style={{ marginBottom: 12, fontSize: 'var(--font-lg)', color: 'var(--white)' }}>4. Cookie</h3>
             <p style={{ color: 'var(--gray-2)', lineHeight: 1.8, marginBottom: 24 }}>Kami menggunakan cookie untuk meningkatkan pengalaman browsing kamu. Cookie membantu kami mengingat preferensi dan memahami bagaimana kamu menggunakan situs kami.</p>
             <h3 style={{ marginBottom: 12, fontSize: 'var(--font-lg)', color: 'var(--white)' }}>5. Kontak</h3>
-            <p style={{ color: 'var(--gray-2)', lineHeight: 1.8 }}>Jika kamu memiliki pertanyaan tentang kebijakan privasi ini, silakan hubungi kami di support@gameku.com</p>
+            <p style={{ color: 'var(--gray-2)', lineHeight: 1.8 }}>Jika kamu memiliki pertanyaan tentang kebijakan privasi ini, silakan hubungi kami di support@gameku.store</p>
           </div>
         </div>
       </div>

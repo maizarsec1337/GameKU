@@ -50,7 +50,14 @@ export const GuestRoute = ({ children }) => {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    // Redirect logged-in users to their respective dashboard
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return <Navigate to="/admin" replace />;
+    } else if (user.role === 'reseller') {
+      return <Navigate to="/reseller" replace />;
+    } else {
+      return <Navigate to="/user" replace />;
+    }
   }
 
   return children;
@@ -79,7 +86,11 @@ export const AdminRoute = ({ children }) => {
   }
 
   if (user.role !== 'admin' && user.role !== 'super_admin') {
-    return <Navigate to="/" replace />;
+    // Redirect non-admin users
+    if (user.role === 'reseller') {
+      return <Navigate to="/reseller" replace />;
+    }
+    return <Navigate to="/user" replace />;
   }
 
   return children;
@@ -108,7 +119,11 @@ export const ResellerRoute = ({ children }) => {
   }
 
   if (user.role !== 'reseller') {
-    return <Navigate to="/" replace />;
+    // Redirect non-reseller users
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/user" replace />;
   }
 
   return children;
@@ -134,6 +149,15 @@ export const UserRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If user is admin or reseller, redirect to their dashboard
+  if (user.role === 'admin' || user.role === 'super_admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  if (user.role === 'reseller') {
+    return <Navigate to="/reseller" replace />;
   }
 
   return children;

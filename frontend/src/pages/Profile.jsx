@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/authAPI';
+import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
 
 function Profile() {
   const navigate = useNavigate();
+  const { user: authUser, logout, checkAuth } = useAuth();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resellerStatus, setResellerStatus] = useState({ status: 'belum' });
@@ -26,8 +28,9 @@ function Profile() {
     setLoading(true);
     try {
       const response = await authAPI.me();
-      if (response.data && response.data.success) {
-        setUser(response.data.user);
+      const data = response.data || response;
+      if (data.success) {
+        setUser(data.user);
       } else {
         navigate('/login');
       }
@@ -41,8 +44,9 @@ function Profile() {
   const fetchResellerStatus = async () => {
     try {
       const response = await authAPI.getResellerStatus();
-      if (response.data && response.data.success) {
-        setResellerStatus(response.data);
+      const data = response.data || response;
+      if (data.success) {
+        setResellerStatus(data);
       }
     } catch (error) {
       console.error('Failed to fetch reseller status', error);
@@ -51,8 +55,8 @@ function Profile() {
 
   const handleLogout = async () => {
     try {
-      await authAPI.logout();
-      navigate('/login');
+      await logout();
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Logout failed', error);
     }
@@ -64,8 +68,10 @@ function Profile() {
     
     try {
       const response = await authAPI.registerReseller(resellerForm);
-      if (response.success) {
+      const data = response.data || response;
+      if (data.success) {
         setResellerStatus({ status: 'proses' });
+        await checkAuth(); // Refresh user data
         alert('Pengajuan reseller berhasil dikirim! Menunggu verifikasi.');
       }
     } catch (error) {
@@ -143,31 +149,21 @@ function Profile() {
 
         <div className="profile-card">
           <img 
-            src={assets.avatar.default.file} 
+            src={user?.photoURL || user?.avatar || assets.avatar.default.file} 
             alt="Profile" 
             className="profile-avatar"
           />
 
           <div className="profile-info">
-            <h2>{user?.fullName || user?.name}</h2>
+            <h2>{user?.fullName || user?.email}</h2>
             <span className={`profile-role ${getRoleClass(user?.role)}`}>
               {user?.role === 'super_admin' ? 'SUPER ADMIN' : user?.role?.toUpperCase()}
             </span>
 
             <div className="profile-details">
               <div className="profile-detail-item">
-                <label>Username</label>
-                <p>@{user?.username}</p>
-              </div>
-
-              <div className="profile-detail-item">
                 <label>Email</label>
                 <p>{user?.email}</p>
-              </div>
-
-              <div className="profile-detail-item">
-                <label>Nomor Telepon</label>
-                <p>{user?.phone || 'Belum diisi'}</p>
               </div>
 
               <div className="profile-detail-item">

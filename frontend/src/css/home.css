@@ -461,43 +461,71 @@ body {
 }
 
 /* ====================
-   BANNER SECTION - Horizontal Carousel
+   BANNER SECTION - Auto Slide Carousel (Full Width Like Ads)
    ==================== */
 
 .banner-section {
   margin-top: 60px;
-  padding: var(--space-lg) 0;
+  padding: 0;
   background: var(--dark);
+  overflow: hidden;
 }
 
 .banner-carousel {
+  position: relative;
+  overflow: hidden;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+.banner-slider {
   display: flex;
-  gap: var(--space-sm);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  height: 240px;
 }
 
 .banner-slide {
-  border-radius: var(--radius-lg);
+  flex: 0 0 100%;
+  height: 100%;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
-  transition: transform var(--transition-base);
-  flex-shrink: 0;
-  scroll-snap-align: start;
-}
-
-.banner-slide:hover {
-  transform: translateY(-4px);
+  position: relative;
 }
 
 .banner-slide img {
   width: 100%;
-  height: 180px;
+  height: 100%;
   object-fit: cover;
   object-position: center;
   display: block;
+  transition: transform 4s ease-in-out;
+}
+
+/* Banner Indicators */
+.banner-indicators {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.banner-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.banner-indicator.active {
+  background: var(--primary);
+}
+
+/* Pause on hover */
+.banner-section:hover .banner-slider {
+  animation-play-state: paused;
 }
 
 /* ====================

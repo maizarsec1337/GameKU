@@ -22,8 +22,12 @@ router.post('/register', register);
 // Route untuk login
 router.post('/login', login);
 
-// Route untuk Google OAuth
-router.get('/google', googleLogin);
+// Route untuk Firebase Google Login
+router.post('/google', googleLogin);
+// Legacy route - redirect to Firebase flow
+router.get('/google', (req, res) => {
+  res.redirect(`${process.env.CORS_ORIGIN}/login`);
+});
 router.get('/google/callback', googleCallback);
 
 // Route untuk logout

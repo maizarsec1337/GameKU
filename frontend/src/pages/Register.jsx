@@ -1,11 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/authAPI';
+import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import firebaseConfig from '../config/firebase';
+
+// Initialize Firebase
+let firebaseApp;
+let firebaseAuth;
+
+try {
+  firebaseApp = initializeApp(firebaseConfig);
+  firebaseAuth = getAuth(firebaseApp);
+} catch (e) {
+  // Firebase already initialized
+  firebaseAuth = getAuth();
+}
 
 function Register() {
   const navigate = useNavigate();
+  const { checkAuth } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -18,30 +35,6 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [googleUserData, setGoogleUserData] = useState(null);
-
-  useEffect(() => {
-    // Check for Google OAuth callback data
-    const checkGoogleCallback = async () => {
-      try {
-        const response = await authAPI.googleCallback();
-        if (response.needs_completion) {
-          setGoogleUserData(response);
-          setFormData(prev => ({
-            ...prev,
-            email: response.email || '',
-            fullName: response.name || '',
-          }));
-        } else if (response.success) {
-          localStorage.setItem('token', response.token);
-          navigate('/');
-        }
-      } catch (error) {
-        // No Google callback data, proceed with normal registration
-      }
-    };
-    checkGoogleCallback();
-  }, [navigate]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -105,11 +98,13 @@ function Register() {
       };
 
       const response = await authAPI.register(data);
-      if (response.success) {
-        localStorage.setItem('token', response.token);
-        navigate('/');
+      const respData = response.data || response;
+      if (respData.success && respData.token) {
+        localStorage.setItem('token', respData.token);
+        await checkAuth();
+        navigate('/user', { replace: true });
       } else {
-        setErrors({ submit: response.message || 'Registrasi gagal' });
+        setErrors({ submit: respData.message || 'Registrasi gagal' });
       }
     } catch (error) {
       setErrors({ submit: error.response?.data?.message || 'Terjadi kesalahan saat registrasi' });
@@ -118,8 +113,39 @@ function Register() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    authAPI.googleLogin();
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      
+      const result = await signInWithPopup(firebaseAuth, provider);
+      const idToken = await result.user.getIdToken();
+      
+      // Send ID token to backend for verification
+      const response = await authAPI.googleLogin(idToken);
+      const respData = response.data || response;
+      
+      if (respData && respData.success && respData.token) {
+        localStorage.setItem('token', respData.token);
+        await checkAuth();
+        navigate('/user', { replace: true });
+      } else {
+        setErrors({ submit: respData?.message || 'Registrasi Google gagal' });
+      }
+    } catch (error) {
+      console.error('Google login popup error:', error);
+      if (error.code === 'auth/popup-blocked') {
+        setErrors({ submit: 'Popup diblokir. Silakan izinkan popup di browser Anda.' });
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // User cancelled, no error message
+      } else if (error.response?.data?.message) {
+        setErrors({ submit: error.response.data.message });
+      } else {
+        setErrors({ submit: 'Registrasi Google gagal. Silakan coba lagi.' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -154,20 +180,6 @@ function Register() {
           <h1>Daftar GameKU</h1>
           <p>Buat akun untuk mulai berbelanja</p>
         </div>
-
-        {googleUserData && (
-          <div style={{ 
-            background: 'rgba(255, 215, 0, 0.1)', 
-            border: '1px solid var(--primary)',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
-            marginBottom: '20px'
-          }}>
-            <p style={{ fontSize: 'var(--font-sm)', color: 'var(--primary)', margin: 0 }}>
-              Lengkapi data berikut untuk menyelesaikan registrasi dari Google
-            </p>
-          </div>
-        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-input-group">
@@ -224,9 +236,8 @@ function Register() {
               placeholder="nama@email.com"
               value={formData.email}
               onChange={handleChange}
-              className={`auth-input ${errors.email ? 'error' : ''} ${googleUserData ? 'readonly' : ''}`}
-              disabled={loading || googleUserData}
-              readOnly={googleUserData}
+              className={`auth-input ${errors.email ? 'error' : ''}`}
+              disabled={loading}
             />
             {errors.email && <span className="auth-error">{errors.email}</span>}
           </div>

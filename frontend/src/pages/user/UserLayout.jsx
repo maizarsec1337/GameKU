@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 function UserLayout() {
-  const { user, loading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => {
-    if (!loading && (!user || user.role === 'admin' || user.role === 'reseller')) {
-      navigate('/login');
-    }
-  }, [user, loading, navigate]);
-
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const menuItems = [
