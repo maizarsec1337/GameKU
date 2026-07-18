@@ -8,6 +8,7 @@ import './css/app.css';
 import './css/home.css';
 import './css/responsive.css';
 import './css/auth.css';
+import './css/admin.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

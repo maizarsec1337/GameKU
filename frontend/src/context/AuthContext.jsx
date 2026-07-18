@@ -30,14 +30,21 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     setLoading(true);
     try {
-      const response = await authAPI.me();
-      if (response.success) {
-        setUser(response.user);
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await authAPI.me();
+        if (response.success) {
+          setUser(response.user);
+        } else {
+          setUser(null);
+          localStorage.removeItem('token');
+        }
       } else {
         setUser(null);
       }
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }

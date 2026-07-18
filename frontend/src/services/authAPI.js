@@ -1,17 +1,8 @@
 import axios from 'axios';
 
-// TODO: Generate security headers untuk mencegah replay attack
-// const generateSecurityHeaders = () => {
-//   return {
-//     'X-Timestamp': Math.floor(Date.now() / 1000),
-//     'X-Nonce': crypto.randomUUID(),
-//     'X-Signature': await generateSignature(JSON.stringify(data), secretKey)
-//   };
-// };
-
 // Create axios instance for API calls
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,17 +10,8 @@ const api = axios.create({
 });
 
 // Request interceptor for adding token if available
-// TODO: Implementasi Request Signature
-// TODO: Implementasi Timestamp Validation
-// TODO: Implementasi Nonce Validation
 api.interceptors.request.use(
   (config) => {
-    // TODO: Tambahkan security headers
-    // const timestamp = Math.floor(Date.now() / 1000);
-    // const nonce = crypto.randomUUID();
-    // config.headers['X-Timestamp'] = timestamp;
-    // config.headers['X-Nonce'] = nonce;
-    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -53,10 +35,10 @@ export const authAPI = {
     return response.data;
   },
 
-  // Google login - redirects to backend
+  // Google login - redirects to backend Google OAuth endpoint
   googleLogin: async () => {
     // Redirect to backend Google OAuth endpoint
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/google`;
   },
 
   // Google callback handler
@@ -109,6 +91,77 @@ export const authAPI = {
   // Get reseller status
   getResellerStatus: async () => {
     const response = await api.get('/auth/reseller/status');
+    return response.data;
+  },
+
+  // Dashboard reseller stats
+  getResellerStats: async () => {
+    const response = await api.get('/reseller/dashboard/stats');
+    return response.data;
+  },
+
+  // Reseller store info
+  getStore: async () => {
+    const response = await api.get('/reseller/store');
+    return response.data;
+  },
+
+  updateStore: async (data) => {
+    const response = await api.put('/reseller/store', data);
+    return response.data;
+  },
+
+  // Reseller products
+  resellerProducts: async () => {
+    const response = await api.get('/reseller/products');
+    return response.data;
+  },
+
+  createProduct: async (data) => {
+    const response = await api.post('/reseller/products', data);
+    return response.data;
+  },
+
+  updateProduct: async (id, data) => {
+    const response = await api.put(`/reseller/products/${id}`, data);
+    return response.data;
+  },
+
+  deleteProduct: async (id) => {
+    const response = await api.delete(`/reseller/products/${id}`);
+    return response.data;
+  },
+
+  // Reseller orders
+  resellerOrders: async () => {
+    const response = await api.get('/reseller/orders');
+    return response.data;
+  },
+
+  updateOrderStatus: async (id, status) => {
+    const response = await api.put(`/reseller/orders/${id}`, { status });
+    return response.data;
+  },
+
+  // Reseller stock
+  resellerStock: async () => {
+    const response = await api.get('/reseller/stock');
+    return response.data;
+  },
+
+  updateStock: async (id, stock) => {
+    const response = await api.put(`/reseller/stock/${id}`, { stock });
+    return response.data;
+  },
+
+  // Reseller withdraw
+  createWithdraw: async (data) => {
+    const response = await api.post('/reseller/withdraw', data);
+    return response.data;
+  },
+
+  resellerWithdraws: async () => {
+    const response = await api.get('/reseller/withdraw');
     return response.data;
   },
 };

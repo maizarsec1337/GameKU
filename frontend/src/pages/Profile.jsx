@@ -26,8 +26,8 @@ function Profile() {
     setLoading(true);
     try {
       const response = await authAPI.me();
-      if (response.success) {
-        setUser(response.user);
+      if (response.data && response.data.success) {
+        setUser(response.data.user);
       } else {
         navigate('/login');
       }
@@ -41,8 +41,8 @@ function Profile() {
   const fetchResellerStatus = async () => {
     try {
       const response = await authAPI.getResellerStatus();
-      if (response.success) {
-        setResellerStatus(response);
+      if (response.data && response.data.success) {
+        setResellerStatus(response.data);
       }
     } catch (error) {
       console.error('Failed to fetch reseller status', error);

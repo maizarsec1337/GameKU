@@ -8,45 +8,36 @@
  * - Developer backend yang akan mengisi konfigurasi
  */
 
-// TODO:
-// Import Firebase Admin SDK
+const admin = require('firebase-admin');
 
-// TODO:
-// Inisialisasi Firebase Admin dengan credential.
-
-// TODO:
-// Setup Firebase Admin SDK dengan environment variable.
-
-// TODO:
-// Konfigurasi Firebase Authentication.
-
-// Konstanta Firebase (placeholder)
+// Firebase configuration from environment variables
 const firebaseConfig = {
-  // TODO: Isi dengan environment variable
-  // projectId: process.env.FIREBASE_PROJECT_ID,
-  // privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
-  // privateKey: process.env.FIREBASE_PRIVATE_KEY,
-  // clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  // clientId: process.env.FIREBASE_CLIENT_ID,
-  // authUri: 'https://accounts.google.com/o/oauth2/auth',
-  // tokenUri: 'https://oauth2.googleapis.com/token',
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  clientId: process.env.FIREBASE_CLIENT_ID,
+  authUri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+  tokenUri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
 };
 
-// TODO:
-// Inisialisasi Firebase Admin App
-// admin.initializeApp({
-//   credential: admin.credential.cert(firebaseConfig)
-// });
+// Initialize Firebase Admin SDK
+let auth;
+let db;
 
-// TODO:
-// Export Firebase Auth & Admin
-// const auth = admin.auth();
-// const db = admin.firestore();
-
-// Placeholder exports
-const auth = null;
-const db = null;
-const admin = null;
+try {
+  if (firebaseConfig.projectId && firebaseConfig.privateKey && firebaseConfig.clientEmail) {
+    admin.initializeApp({
+      credential: admin.credential.cert(firebaseConfig)
+    });
+    auth = admin.auth();
+    db = admin.firestore();
+  } else {
+    console.warn('Firebase Admin SDK not initialized. Missing required environment variables.');
+  }
+} catch (error) {
+  console.error('Error initializing Firebase Admin SDK:', error.message);
+}
 
 module.exports = {
   firebaseConfig,

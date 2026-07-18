@@ -5,3 +5,9 @@ build/
 .env.*
 *.log
 coverage/
+backend/.env
+frontend/.env
+
+# Storage - uploaded files not tracked in git
+storage/
+!storage/.gitkeep

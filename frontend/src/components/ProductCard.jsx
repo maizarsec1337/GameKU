@@ -1,5 +1,6 @@
 import React from 'react';
 import BadgePlatform from './BadgePlatform';
+import ImageWithFallback from './ImageWithFallback';
  
  function ProductCard({ id, name, image, price, category, platform, originalPrice, discount, rating, sold }) {
    return (
@@ -9,13 +10,11 @@ import BadgePlatform from './BadgePlatform';
        data-category={category}
      >
        <div className="product-image-wrapper">
-         <img 
+         <ImageWithFallback 
            src={image} 
            alt={name} 
+           type="product"
            loading="lazy"
-           onError={(e) => {
-             e.target.src = '/src/gambar/logo/Gcard.png';
-           }}
          />
          {discount && (
            <div className="product-badge">{discount}% OFF</div>

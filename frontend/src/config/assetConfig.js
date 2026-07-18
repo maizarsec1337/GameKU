@@ -2,7 +2,7 @@ const assets = {
   logo: {
     // Logo lengkap (ikon + tulisan GameKU) - untuk Navbar Desktop, Footer, Landing Page
     main: {
-      file: '/src/gambar/logo/logo.png',
+      file: '/gambar/logo/logo.png',
       title: 'Gameku',
       alt: 'Gameku Logo',
       category: 'logo',
@@ -11,7 +11,7 @@ const assets = {
     },
     // Logo ikon portrait (Glogo.png) - untuk Login, Register, Forgot Password, Reset Password, Loading Screen, Favicon
     icon: {
-      file: '/src/gambar/logo/Glogo.png',
+      file: '/gambar/logo/Glogo.png',
       title: 'Gameku Icon',
       alt: 'Gameku Icon',
       category: 'logo',
@@ -20,7 +20,7 @@ const assets = {
     },
     // Logo ikon landscape (Glogo2.png) - untuk Sidebar Dashboard, Header Dashboard
     iconLandscape: {
-      file: '/src/gambar/logo/Glogo2.png',
+      file: '/gambar/logo/Glogo2.png',
       title: 'Gameku Icon Landscape',
       alt: 'Gameku Icon Landscape',
       category: 'logo',
@@ -29,12 +29,52 @@ const assets = {
     }
   },
  
-  // Fallback image for all product cards
+  // Fallback images for all types
   fallback: {
     product: {
-      file: '/src/gambar/logo/Gcard.png',
+      file: '/gambar/logo/Gcard.png',
       title: 'Product Fallback',
       alt: 'Default Product Image',
+      category: 'fallback',
+      width: 200,
+      height: 200
+    },
+    banner: {
+      file: '/gambar/banner/hero1.png',
+      title: 'Banner Fallback',
+      alt: 'Default Banner Image',
+      category: 'fallback',
+      width: 1200,
+      height: 500
+    },
+    avatar: {
+      file: '/gambar/avatar/default.png',
+      title: 'Avatar Fallback',
+      alt: 'Default Avatar',
+      category: 'fallback',
+      width: 80,
+      height: 80
+    },
+    promo: {
+      file: '/gambar/promo/flashsale.png',
+      title: 'Promo Fallback',
+      alt: 'Default Promo Image',
+      category: 'fallback',
+      width: 400,
+      height: 200
+    },
+    review: {
+      file: '/gambar/logo/Gcard.png',
+      title: 'Review Fallback',
+      alt: 'Default Review Image',
+      category: 'fallback',
+      width: 200,
+      height: 200
+    },
+    voucher: {
+      file: '/gambar/voucher/googleplay.png',
+      title: 'Voucher Fallback',
+      alt: 'Default Voucher Image',
       category: 'fallback',
       width: 200,
       height: 200
@@ -43,7 +83,7 @@ const assets = {
  
   banner: {
     hero1: {
-      file: '/src/gambar/banner/hero1.png',
+      file: '/gambar/banner/hero1.png',
       title: 'Top Up Game Murah',
       alt: 'Banner Top Up Game Murah',
       category: 'banner',
@@ -52,7 +92,7 @@ const assets = {
       height: 500
     },
     hero2: {
-      file: '/src/gambar/banner/hero2.png',
+      file: '/gambar/banner/hero2.png',
       title: 'Voucher Game Diskon',
       alt: 'Banner Voucher Game Diskon',
       category: 'banner',
@@ -61,7 +101,7 @@ const assets = {
       height: 500
     },
     hero3: {
-      file: '/src/gambar/banner/hero3.png',
+      file: '/gambar/banner/hero3.png',
       title: 'Steam Wallet Promo',
       alt: 'Banner Steam Wallet Promo',
       category: 'banner',
@@ -70,7 +110,7 @@ const assets = {
       height: 500
     },
     promo1: {
-      file: '/src/gambar/banner/promo1.png',
+      file: '/gambar/banner/promo1.png',
       title: 'Promo Akhir Tahun',
       alt: 'Banner Promo Akhir Tahun',
       category: 'banner',
@@ -79,7 +119,7 @@ const assets = {
       height: 300
     },
     promo2: {
-      file: '/src/gambar/banner/promo2.png',
+      file: '/gambar/banner/promo2.png',
       title: 'Promo Member Baru',
       alt: 'Banner Promo Member Baru',
       category: 'banner',
@@ -91,7 +131,7 @@ const assets = {
  
   game: {
     mlbb: {
-      file: '/src/gambar/game/mlbb.png',
+      file: '/gambar/game/mlbb.png',
       title: 'Mobile Legends',
       alt: 'Mobile Legends Bang Bang',
       category: 'game',
@@ -100,7 +140,7 @@ const assets = {
       height: 200
     },
     ff: {
-      file: '/src/gambar/game/free-fire.png',
+      file: '/gambar/game/free-fire.png',
       title: 'Free Fire',
       alt: 'Free Fire',
       category: 'game',
@@ -109,7 +149,7 @@ const assets = {
       height: 200
     },
     pubg: {
-      file: '/src/gambar/game/pubg.webp',
+      file: '/gambar/game/pubg.webp',
       title: 'PUBG Mobile',
       alt: 'PUBG Mobile',
       category: 'game',
@@ -118,7 +158,7 @@ const assets = {
       height: 200
     },
     genshin: {
-      file: '/src/gambar/game/genshin.jpeg',
+      file: '/gambar/game/genshin.jpeg',
       title: 'Genshin Impact',
       alt: 'Genshin Impact',
       category: 'game',
@@ -127,7 +167,7 @@ const assets = {
       height: 200
     },
     valorant: {
-      file: '/src/gambar/game/valorant.png',
+      file: '/gambar/game/valorant.png',
       title: 'Valorant',
       alt: 'Valorant',
       category: 'game',
@@ -136,7 +176,7 @@ const assets = {
       height: 200
     },
     fifa: {
-      file: '/src/gambar/game/efootbal.webp',
+      file: '/gambar/game/efootbal.webp',
       title: 'FIFA Mobile',
       alt: 'FIFA Mobile',
       category: 'game',
@@ -145,7 +185,7 @@ const assets = {
       height: 200
     },
     cod: {
-      file: '/src/gambar/game/codm.jpeg',
+      file: '/gambar/game/codm.jpeg',
       title: 'Call of Duty Mobile',
       alt: 'Call of Duty Mobile',
       category: 'game',
@@ -154,7 +194,7 @@ const assets = {
       height: 200
     },
     lol: {
-      file: '/src/gambar/game/lol.jpeg',
+      file: '/gambar/game/lol.jpeg',
       title: 'League of Legends',
       alt: 'League of Legends Wild Rift',
       category: 'game',
@@ -163,7 +203,7 @@ const assets = {
       height: 200
     },
     playstation: {
-      file: '/src/gambar/game/playstation.jpeg',
+      file: '/gambar/game/playstation.jpeg',
       title: 'PlayStation',
       alt: 'PlayStation Network',
       category: 'game',
@@ -172,7 +212,7 @@ const assets = {
       height: 200
     },
     xbox: {
-      file: '/src/gambar/game/xbox.png',
+      file: '/gambar/game/xbox.png',
       title: 'Xbox',
       alt: 'Xbox Live',
       category: 'game',
@@ -184,7 +224,7 @@ const assets = {
  
   voucher: {
     googleplay: {
-      file: '/src/gambar/voucher/googleplay.png',
+      file: '/gambar/voucher/googleplay.png',
       title: 'Google Play',
       alt: 'Google Play Gift Card',
       category: 'voucher',
@@ -193,7 +233,7 @@ const assets = {
       height: 200
     },
     playstation: {
-      file: '/src/gambar/voucher/playstation.png',
+      file: '/gambar/voucher/playstation.png',
       title: 'PlayStation',
       alt: 'PlayStation Store Gift Card',
       category: 'voucher',
@@ -202,7 +242,7 @@ const assets = {
       height: 200
     },
     xbox: {
-      file: '/src/gambar/voucher/xbox.png',
+      file: '/gambar/voucher/xbox.png',
       title: 'Xbox',
       alt: 'Xbox Gift Card',
       category: 'voucher',
@@ -211,7 +251,7 @@ const assets = {
       height: 200
     },
     nintendo: {
-      file: '/src/gambar/voucher/nintendo.png',
+      file: '/gambar/voucher/nintendo.png',
       title: 'Nintendo',
       alt: 'Nintendo eShop Gift Card',
       category: 'voucher',
@@ -223,7 +263,7 @@ const assets = {
  
   steam: {
     wallet: {
-      file: '/src/gambar/steam/steam.jpeg',
+      file: '/gambar/steam/steam.jpeg',
       title: 'Steam Wallet',
       alt: 'Steam Wallet',
       category: 'steam',
@@ -232,7 +272,7 @@ const assets = {
       height: 200
     },
     giftcard: {
-      file: '/src/gambar/giftcard/youtube.png',
+      file: '/gambar/giftcard/youtube.png',
       title: 'Steam Gift Card',
       alt: 'Steam Gift Card',
       category: 'steam',
@@ -244,7 +284,7 @@ const assets = {
  
   giftcard: {
     itunes: {
-      file: '/src/gambar/giftcard/itunes.png',
+      file: '/gambar/giftcard/itunes.png',
       title: 'Apple iTunes',
       alt: 'Apple iTunes Gift Card',
       category: 'giftcard',
@@ -253,7 +293,7 @@ const assets = {
       height: 200
     },
     spotify: {
-      file: '/src/gambar/giftcard/spotify.png',
+      file: '/gambar/giftcard/spotify.png',
       title: 'Spotify Premium',
       alt: 'Spotify Premium Gift Card',
       category: 'giftcard',
@@ -262,7 +302,7 @@ const assets = {
       height: 200
     },
     netflix: {
-      file: '/src/gambar/giftcard/netflix.png',
+      file: '/gambar/giftcard/netflix.png',
       title: 'Netflix',
       alt: 'Netflix Gift Card',
       category: 'giftcard',
@@ -271,7 +311,7 @@ const assets = {
       height: 200
     },
     youtube: {
-      file: '/src/gambar/giftcard/youtube.png',
+      file: '/gambar/giftcard/youtube.png',
       title: 'YouTube Premium',
       alt: 'YouTube Premium Gift Card',
       category: 'giftcard',
@@ -283,7 +323,7 @@ const assets = {
  
   membership: {
     vip: {
-      file: '/src/gambar/membership/vip.png',
+      file: '/gambar/membership/vip.png',
       title: 'VIP Membership',
       alt: 'VIP Membership Gameku',
       category: 'membership',
@@ -292,7 +332,7 @@ const assets = {
       height: 200
     },
     premium: {
-      file: '/src/gambar/membership/premium.png',
+      file: '/gambar/membership/premium.png',
       title: 'Premium Membership',
       alt: 'Premium Membership Gameku',
       category: 'membership',
@@ -304,7 +344,7 @@ const assets = {
  
   promo: {
     flashsale: {
-      file: '/src/gambar/promo/flashsale.png',
+      file: '/gambar/promo/flashsale.png',
       title: 'Flash Sale',
       alt: 'Flash Sale Gameku',
       category: 'promo',
@@ -313,7 +353,7 @@ const assets = {
       height: 200
     },
     bonus: {
-      file: '/src/gambar/promo/bonus.png',
+      file: '/gambar/promo/bonus.png',
       title: 'Bonus Top Up',
       alt: 'Bonus Top Up Gameku',
       category: 'promo',
@@ -325,7 +365,7 @@ const assets = {
  
   icon: {
     cart: {
-      file: '/src/gambar/icon/cart.png',
+      file: '/gambar/icon/cart.png',
       title: 'Cart',
       alt: 'Cart Icon',
       category: 'icon',
@@ -333,7 +373,7 @@ const assets = {
       height: 24
     },
     search: {
-      file: '/src/gambar/icon/search.png',
+      file: '/gambar/icon/search.png',
       title: 'Search',
       alt: 'Search Icon',
       category: 'icon',
@@ -341,7 +381,7 @@ const assets = {
       height: 24
     },
     user: {
-      file: '/src/gambar/icon/user.png',
+      file: '/gambar/icon/user.png',
       title: 'User',
       alt: 'User Icon',
       category: 'icon',
@@ -349,7 +389,7 @@ const assets = {
       height: 24
     },
     discount: {
-      file: '/src/gambar/icon/discount.png',
+      file: '/gambar/icon/discount.png',
       title: 'Discount',
       alt: 'Discount Icon',
       category: 'icon',
@@ -357,7 +397,7 @@ const assets = {
       height: 24
     },
     shield: {
-      file: '/src/gambar/icon/shield.png',
+      file: '/gambar/icon/shield.png',
       title: 'Shield',
       alt: 'Shield Icon',
       category: 'icon',
@@ -365,7 +405,7 @@ const assets = {
       height: 24
     },
     delivery: {
-      file: '/src/gambar/icon/delivery.png',
+      file: '/gambar/icon/delivery.png',
       title: 'Delivery',
       alt: 'Delivery Icon',
       category: 'icon',
@@ -373,7 +413,7 @@ const assets = {
       height: 24
     },
     support: {
-      file: '/src/gambar/icon/support.png',
+      file: '/gambar/icon/support.png',
       title: 'Support',
       alt: 'Support Icon',
       category: 'icon',
@@ -393,7 +433,7 @@ const assets = {
       height: 1080
     },
     hero: {
-      file: '/src/gambar/background/hero-bg.png',
+      file: '/gambar/background/hero-bg.png',
       title: 'Hero Background',
       alt: 'Hero Section Background',
       category: 'background',
@@ -401,7 +441,7 @@ const assets = {
       height: 600
     },
     features: {
-      file: '/src/gambar/background/features-bg.png',
+      file: '/gambar/background/features-bg.png',
       title: 'Features Background',
       alt: 'Features Section Background',
       category: 'background',
@@ -412,7 +452,7 @@ const assets = {
  
   avatar: {
     default: {
-      file: '/src/gambar/avatar/default.png',
+      file: '/gambar/avatar/default.png',
       title: 'Default Avatar',
       alt: 'Default User Avatar',
       category: 'avatar',
