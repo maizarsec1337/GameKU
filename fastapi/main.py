@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
     await seed_database()
-    print(f"🚀 Gameku FastAPI Server running on http://localhost:{os.getenv('PORT', 5000)}")
+    print(f"🚀 Gameku FastAPI Server running on http://localhost:{os.getenv('PORT', 8000)}")
     print(f"📝 Environment: {os.getenv('NODE_ENV', 'development')}")
     yield
     # Shutdown
@@ -72,5 +72,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

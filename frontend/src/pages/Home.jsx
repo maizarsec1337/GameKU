@@ -534,7 +534,6 @@ function Home() {
               <li><Link to="/category/steam">Steam Wallet</Link></li>
               <li><Link to="/category/giftcard">Gift Card</Link></li>
               <li><Link to="/category/minecraft">Minecraft</Link></li>
-              <li><Link to="/category/membership">Membership</Link></li>
             </ul>
           </div>
 

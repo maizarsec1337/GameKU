@@ -32,7 +32,6 @@ const sidebarMenus = [
   { slug: 'steam', name: 'Steam', icon: '🪙' },
   { slug: 'giftcard', name: 'Gift Card', icon: '🎁' },
   { slug: 'minecraft', name: 'Minecraft', icon: '🧱' },
-  { slug: 'membership', name: 'Membership', icon: '⭐' },
   { slug: 'gamekey', name: 'Game Key', icon: '🎯' },
   { slug: 'promo', name: 'Promo', icon: '🔥' },
   { slug: 'account', name: 'Account', icon: '👤' },

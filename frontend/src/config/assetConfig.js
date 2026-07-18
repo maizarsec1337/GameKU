@@ -28,7 +28,7 @@ const assets = {
       height: 32
     }
   },
- 
+  
   // Fallback images for all types
   fallback: {
     product: {
@@ -80,7 +80,7 @@ const assets = {
       height: 200
     }
   },
- 
+  
   banner: {
     hero1: {
       file: '/gambar/banner/hero1.png',
@@ -128,7 +128,7 @@ const assets = {
       height: 300
     }
   },
- 
+  
   game: {
     mlbb: {
       file: '/gambar/game/mlbb.png',
@@ -221,7 +221,7 @@ const assets = {
       height: 200
     }
   },
- 
+  
   voucher: {
     googleplay: {
       file: '/gambar/voucher/googleplay.png',
@@ -260,7 +260,7 @@ const assets = {
       height: 200
     }
   },
- 
+  
   steam: {
     wallet: {
       file: '/gambar/steam/steam.jpeg',
@@ -281,7 +281,7 @@ const assets = {
       height: 200
     }
   },
- 
+  
   giftcard: {
     itunes: {
       file: '/gambar/giftcard/itunes.png',
@@ -320,28 +320,7 @@ const assets = {
       height: 200
     }
   },
- 
-  membership: {
-    vip: {
-      file: '/gambar/membership/vip.png',
-      title: 'VIP Membership',
-      alt: 'VIP Membership Gameku',
-      category: 'membership',
-      description: 'Dapatkan akses VIP eksklusif',
-      width: 200,
-      height: 200
-    },
-    premium: {
-      file: '/gambar/membership/premium.png',
-      title: 'Premium Membership',
-      alt: 'Premium Membership Gameku',
-      category: 'membership',
-      description: 'Nikmati keuntungan premium',
-      width: 200,
-      height: 200
-    }
-  },
- 
+  
   promo: {
     flashsale: {
       file: '/gambar/promo/flashsale.png',
@@ -362,7 +341,7 @@ const assets = {
       height: 200
     }
   },
- 
+  
   icon: {
     cart: {
       file: '/gambar/icon/cart.png',
@@ -421,7 +400,7 @@ const assets = {
       height: 24
     }
   },
- 
+  
   // Website background for auth pages
   background: {
     website: {
@@ -449,7 +428,7 @@ const assets = {
       height: 400
     }
   },
- 
+  
   avatar: {
     default: {
       file: '/gambar/avatar/default.png',
@@ -461,5 +440,5 @@ const assets = {
     }
   }
 };
- 
+  
 export default assets;

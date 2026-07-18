@@ -364,10 +364,9 @@ SEED_DATA = {
         {"id": 2, "name": "Voucher Game", "slug": "voucher", "icon": "🎟️", "count": "50+ Voucher"},
         {"id": 3, "name": "Steam Wallet", "slug": "steam", "icon": "🪙", "count": "10+ Produk"},
         {"id": 4, "name": "Gift Card", "slug": "giftcard", "icon": "🎁", "count": "20+ Pilihan"},
-        {"id": 5, "name": "Membership", "slug": "membership", "icon": "⭐", "count": "2 Paket"},
-        {"id": 6, "name": "Google Play", "slug": "googleplay", "icon": "▶️", "count": "5+ Nominal"},
-        {"id": 7, "name": "PlayStation", "slug": "playstation", "icon": "🎮", "count": "10+ Voucher"},
-        {"id": 8, "name": "Entertainment", "slug": "entertainment", "icon": "🎬", "count": "15+ Produk"}
+        {"id": 5, "name": "Google Play", "slug": "googleplay", "icon": "▶️", "count": "5+ Nominal"},
+        {"id": 6, "name": "PlayStation", "slug": "playstation", "icon": "🎮", "count": "10+ Voucher"},
+        {"id": 7, "name": "Entertainment", "slug": "entertainment", "icon": "🎬", "count": "15+ Produk"}
     ],
     "games": [
         {"id": 1, "name": "Mobile Legends", "slug": "mlbb", "image": "/images/game/mlbb.jpg", "price": "Rp15.000", "category": "topup"},

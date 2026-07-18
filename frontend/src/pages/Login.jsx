@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../services/authAPI';
+import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
 
@@ -103,6 +104,9 @@ function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Dapatkan checkAuth dari context
+  const { checkAuth } = useAuth();
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -112,8 +116,10 @@ function Login() {
     try {
       const response = await authAPI.login(formData);
       if (response && response.success) {
+        // Simpan token
         localStorage.setItem('token', response.token);
-        sessionStorage.setItem('loginSuccess', 'true');
+        // Update user state di context
+        await checkAuth();
         // Redirect based on role
         if (response.user.role === 'admin') {
           navigate('/admin', { replace: true });

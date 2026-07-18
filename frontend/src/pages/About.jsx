@@ -28,7 +28,7 @@ function About() {
           <div style={{ maxWidth: 800, margin: '0 auto' }}>
             <div className="feature-card" style={{ textAlign: 'left', padding: 'var(--space-xl)', marginBottom: 24 }}>
               <h3 style={{ fontSize: 'var(--font-xl)', marginBottom: 16, color: 'var(--white)' }}>Visi Kami</h3>
-              <p style={{ color: 'var(--gray-2)', lineHeight: 1.8 }}>Menjadi platform digital gaming store nomor satu di Indonesia yang menyediakan layanan top up game, voucher game, steam wallet, gift card, membership, dan kebutuhan digital lainnya dengan harga terbaik dan pelayanan tercepat.</p>
+              <p style={{ color: 'var(--gray-2)', lineHeight: 1.8 }}>Menjadi platform digital gaming store nomor satu di Indonesia yang menyediakan layanan top up game, voucher game, steam wallet, gift card, dan berbagai kebutuhan digital lainnya dengan harga terbaik dan pelayanan tercepat.</p>
             </div>
             <div className="feature-card" style={{ textAlign: 'left', padding: 'var(--space-xl)', marginBottom: 24 }}>
               <h3 style={{ fontSize: 'var(--font-xl)', marginBottom: 16, color: 'var(--white)' }}>Misi Kami</h3>

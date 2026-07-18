@@ -33,8 +33,10 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         const response = await authAPI.me();
-        if (response.success) {
-          setUser(response.user);
+        // Handle axios response format (response.data) or direct response
+        const data = response.data || response;
+        if (data.success) {
+          setUser(data.user);
         } else {
           setUser(null);
           localStorage.removeItem('token');
@@ -56,12 +58,14 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authAPI.login(credentials);
-      if (response.success) {
-        setUser(response.user);
+      const data = response.data || response; // Handle axios response
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
         return { success: true };
       } else {
-        setError(response.message);
-        return { success: false, message: response.message };
+        setError(data.message);
+        return { success: false, message: data.message };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Terjadi kesalahan saat login';

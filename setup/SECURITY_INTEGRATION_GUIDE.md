@@ -19,8 +19,8 @@ Frontend
 ## Backend yang Digunakan
 
 Project ini memiliki DUA backend:
-1. **Node.js Express** - di folder `backend/` (port 5000)
-2. **FastAPI Python** - di folder `fastapi/` (port 5000)
+1. **Node.js Express** - di folder `backend/` (port 8000)
+2. **FastAPI Python** - di folder `fastapi/` (port 8000)
 
 Security Service akan diintegrasikan ke keduanya melalui HTTP API.
 

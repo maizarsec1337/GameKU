@@ -122,6 +122,63 @@ const login = async (req, res) => {
       });
     }
     
+    // Development mode: hardcoded credentials
+    if (process.env.DEV_MODE === 'true') {
+      const devUsers = {
+        admin: {
+          uid: 'admin-123',
+          email: 'admin',
+          password: 'admin123',
+          fullName: 'Administrator',
+          role: 'admin'
+        },
+        user: {
+          uid: 'user-456',
+          email: 'user',
+          password: 'user123',
+          fullName: 'Regular User',
+          role: 'user'
+        },
+        reseller: {
+          uid: 'reseller-789',
+          email: 'reseller',
+          password: 'reseller123',
+          fullName: 'Reseller User',
+          role: 'reseller'
+        }
+      };
+
+      const devUser = Object.values(devUsers).find(u =>
+        u.email === email && u.password === password
+      );
+
+      if (devUser) {
+        const token = generateToken({
+          uid: devUser.uid,
+          email: devUser.email,
+          fullName: devUser.fullName,
+          role: devUser.role
+        });
+
+        return res.json({
+          success: true,
+          message: 'Login berhasil',
+          user: {
+            uid: devUser.uid,
+            email: devUser.email,
+            fullName: devUser.fullName,
+            role: devUser.role
+          },
+          token
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Email atau password salah'
+        });
+      }
+    }
+    
     // Production mode: Firebase Auth
     if (!auth || !admin) {
       return res.status(503).json({
@@ -306,7 +363,7 @@ const googleCallback = async (req, res) => {
     });
     
     // Redirect to frontend with token
-    const redirectUrl = `${process.env.CORS_ORIGIN.split(',')[0] || 'http://localhost:3000'}/auth/callback?token=${token}`;
+    const redirectUrl = `${process.env.CORS_ORIGIN.split(',')[0] || 'http://localhost:5173'}/auth/callback?token=${token}`;
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('Google callback error:', error.message);
