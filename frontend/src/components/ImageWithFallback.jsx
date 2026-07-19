@@ -1,39 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import assets from '../config/assetConfig';
 
 // Fallback defaults for all types
 const FALLBACKS = {
-  product: assets.fallback.product.file,
-  banner: assets.fallback.banner.file,
-  avatar: assets.fallback.avatar.file,
-  promo: assets.fallback.promo.file,
-  review: assets.fallback.review.file,
-  voucher: assets.fallback.voucher.file,
-  default: assets.fallback.product.file
+  product: assets.fallback?.product?.file || '/gambar/product/default.jpg',
+  banner: assets.fallback?.banner?.file || '/gambar/banner/default.jpg',
+  avatar: assets.fallback?.avatar?.file || '/gambar/avatar/default.png',
+  promo: assets.fallback?.promo?.file || '/gambar/promo/default.jpg',
+  review: assets.fallback?.review?.file || '/gambar/review/default.jpg',
+  voucher: assets.fallback?.voucher?.file || '/gambar/voucher/default.png',
+  default: '/gambar/product/default.jpg'
 };
 
 /**
- * Komponen gambar dengan mekanisme fallback otomatis.
- * Jika src kosong (null/undefined), gagal dimuat, atau 404,
- * maka otomatis menampilkan fallback image sesuai tipe.
+ * Komponen gambar dengan mekanisme fallback otomatis dan lazy loading.
+ * - Lazy loading dengan Intersection Observer
+ * - Async decoding
+ * - Fallback otomatis jika gambar gagal dimuat
  */
 function ImageWithFallback({ src, alt = '', type = 'product', className, style, loading, ...rest }) {
+  const imgRef = useRef(null);
+  const [currentSrc, setCurrentSrc] = useState(null);
+  const [hasError, setHasError] = useState(false);
+  const [inView, setInView] = useState(false);
+  
   // Get appropriate fallback based on type
   const fallbackImage = FALLBACKS[type] || FALLBACKS.default;
   
-  // Determine if src is valid (has value and is not empty/placeholder)
+  // Determine if src is valid
   const isValidSrc = src && typeof src === 'string' && src.trim() && src !== 'null' && src !== 'undefined';
-  
-  const [currentSrc, setCurrentSrc] = useState(isValidSrc ? src : fallbackImage);
-  const [hasError, setHasError] = useState(false);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || inView) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '100px', threshold: 0.01 }
+    );
+
+    observer.observe(img);
+    return () => observer.disconnect();
+  }, [inView, src]);
+
+  // Set source when in view
+  useEffect(() => {
+    if (inView) {
+      setCurrentSrc(isValidSrc ? src : fallbackImage);
+    }
+  }, [inView, isValidSrc, src, fallbackImage]);
 
   const handleError = (e) => {
-    // If we haven't already tried fallback
     if (!hasError && currentSrc !== fallbackImage) {
       setHasError(true);
       setCurrentSrc(fallbackImage);
     } else {
-      // Fallback also failed: hide broken image icon
       e.target.onerror = null;
       e.target.style.visibility = 'hidden';
     }
@@ -41,13 +70,17 @@ function ImageWithFallback({ src, alt = '', type = 'product', className, style, 
 
   return (
     <img
+      ref={imgRef}
       src={currentSrc}
       alt={alt}
       className={className}
       loading={loading || 'lazy'}
+      decoding="async"
       style={{
         objectFit: 'cover',
         objectPosition: 'center',
+        opacity: inView ? 1 : 0,
+        transition: 'opacity 0.2s ease',
         ...style
       }}
       onError={handleError}
@@ -56,4 +89,4 @@ function ImageWithFallback({ src, alt = '', type = 'product', className, style, 
   );
 }
 
-export default ImageWithFallback;
+export default memo(ImageWithFallback);

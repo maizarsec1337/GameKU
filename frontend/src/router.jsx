@@ -39,6 +39,8 @@ import ResellerStatistik from './pages/reseller/Statistik';
 import ResellerWithdraw from './pages/reseller/Withdraw';
 import UserLayout from './pages/user/UserLayout';
 import UserDashboard from './pages/user/Dashboard';
+import UserProfile from './pages/user/Profile';
+import UserEditProfile from './pages/user/EditProfile';
 import UserOrders from './pages/user/Orders';
 import UserWishlist from './pages/user/Wishlist';
 import UserAddresses from './pages/user/Addresses';
@@ -46,6 +48,7 @@ import UserVouchers from './pages/user/Vouchers';
 import UserPaymentMethods from './pages/user/PaymentMethods';
 import UserNotifications from './pages/user/Notifications';
 import UserSettings from './pages/user/Settings';
+import BecomeReseller from './pages/user/BecomeReseller';
 import {
   AdminRoute,
   ResellerRoute,
@@ -90,13 +93,16 @@ function AppRouter() {
       {/* User Routes */}
       <Route path="/user" element={<UserRoute><UserLayout /></UserRoute>}>
         <Route index element={<UserDashboard />} />
-        <Route path="orders" element={<UserOrders />} />
+        <Route path="profile" element={<UserProfile />} />
+        <Route path="edit-profile" element={<UserEditProfile />} />
         <Route path="wishlist" element={<UserWishlist />} />
+        <Route path="orders" element={<UserOrders />} />
         <Route path="addresses" element={<UserAddresses />} />
         <Route path="vouchers" element={<UserVouchers />} />
         <Route path="payment-methods" element={<UserPaymentMethods />} />
         <Route path="notifications" element={<UserNotifications />} />
         <Route path="settings" element={<UserSettings />} />
+        <Route path="become-reseller" element={<BecomeReseller />} />
       </Route>
 
       {/* Reseller Routes */}

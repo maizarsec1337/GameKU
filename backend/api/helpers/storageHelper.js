@@ -5,22 +5,33 @@ const { v4: uuidv4 } = require('uuid');
 // Storage base directory
 const STORAGE_BASE = path.join(__dirname, '..', '..', '..', 'storage');
 
-// Storage directories configuration
+// Storage directories configuration - all paths relative to /storage
 const STORAGE_DIRS = {
-  products: { maxSize: 5 * 1024 * 1024 }, // 5MB
-  users: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  profile: { maxSize: 2 * 1024 * 1024 }, // 2MB
+  avatars: { maxSize: 2 * 1024 * 1024 }, // 2MB - alias for profile
   reseller: { maxSize: 5 * 1024 * 1024 }, // 5MB
   ktp: { maxSize: 5 * 1024 * 1024 }, // 5MB
   selfie: { maxSize: 5 * 1024 * 1024 }, // 5MB
-  documents: { maxSize: 10 * 1024 * 1024 }, // 10MB
-  avatars: { maxSize: 2 * 1024 * 1024 }, // 2MB
-  banners: { maxSize: 10 * 1024 * 1024 }, // 10MB
-  promos: { maxSize: 10 * 1024 * 1024 }, // 10MB
-  vouchers: { maxSize: 2 * 1024 * 1024 }, // 2MB
-  categories: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  store: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  product: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  products: { maxSize: 10 * 1024 * 1024 }, // 10MB - for product images with gallery
+  banner: { maxSize: 10 * 1024 * 1024 }, // 10MB
+  banners: { maxSize: 10 * 1024 * 1024 }, // 10MB - alias for banner
+  category: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  categories: { maxSize: 5 * 1024 * 1024 }, // 5MB - alias for category
+  voucher: { maxSize: 2 * 1024 * 1024 }, // 2MB
+  vouchers: { maxSize: 2 * 1024 * 1024 }, // 2MB - alias for voucher
+  promo: { maxSize: 10 * 1024 * 1024 }, // 10MB
+  promos: { maxSize: 10 * 1024 * 1024 }, // 10MB - alias for promo
+  giftcards: { maxSize: 10 * 1024 * 1024 }, // 10MB - for giftcard images
   chat: { maxSize: 5 * 1024 * 1024 }, // 5MB
-  reviews: { maxSize: 5 * 1024 * 1024 }, // 5MB
-  temporary: { maxSize: 10 * 1024 * 1024 } // 10MB
+  review: { maxSize: 5 * 1024 * 1024 }, // 5MB
+  reviews: { maxSize: 5 * 1024 * 1024 }, // 5MB - alias for review
+  documents: { maxSize: 5 * 1024 * 1024 }, // 5MB - for PDF documents
+  temp: { maxSize: 10 * 1024 * 1024 }, // 10MB
+  deleted: { maxSize: 50 * 1024 * 1024 }, // 50MB
+  logs: { maxSize: 50 * 1024 * 1024 }, // 50MB
+  games: { maxSize: 5 * 1024 * 1024 } // 5MB - for game images
 };
 
 // Allowed MIME types

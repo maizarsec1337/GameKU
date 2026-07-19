@@ -12,28 +12,42 @@ const app = express();
 // STORAGE SETUP
 // ====================
 
+// Storage directory - centralized at project root storage/
 const STORAGE_BASE = path.join(__dirname, '..', 'storage');
 const STORAGE_DIRS = [
-  'products', 'users', 'reseller', 'ktp', 'selfie', 
-  'documents', 'avatars', 'banners', 'promos', 'vouchers', 
-  'categories', 'chat', 'reviews', 'temporary'
+  'profile', 'avatars', 'reseller', 'ktp', 'selfie', 
+  'store', 'product', 'products', 'banner', 'banners', 
+  'category', 'categories', 'voucher', 'vouchers', 
+  'promo', 'promos', 'giftcards', 'chat', 'review', 
+  'reviews', 'documents', 'games', 'temp', 'deleted', 'logs',
+  'users'
 ];
 
 // Initialize storage directories
 const initializeStorageDirs = () => {
-  STORAGE_DIRS.forEach(dir => {
-    const dirPath = path.join(STORAGE_BASE, dir);
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+  try {
+    // Create storage base if needed
+    if (!fs.existsSync(STORAGE_BASE)) {
+      fs.mkdirSync(STORAGE_BASE, { recursive: true });
     }
-  });
+    
+    STORAGE_DIRS.forEach(dir => {
+      const dirPath = path.join(STORAGE_BASE, dir);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+    });
+    console.log('✓ Storage directories initialized');
+  } catch (error) {
+    console.error('❌ Storage initialization error:', error.message);
+  }
 };
 
 initializeStorageDirs();
 
-// Serve storage files statically
+// Serve storage files statically with aggressive caching
 app.use('/storage', express.static(STORAGE_BASE, {
-  maxAge: '7d',
+  maxAge: '30d', // 30 days cache for storage
   etag: true,
   lastModified: true,
   setHeaders: (res, filePath) => {
@@ -42,6 +56,23 @@ app.use('/storage', express.static(STORAGE_BASE, {
       res.setHeader('Content-Type', 'image/webp');
     } else if (filePath.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
+    }
+    // Cache control for images
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days immutable
+    }
+  }
+}));
+
+// Serve gambar folder (production assets) with cache
+app.use('/gambar', express.static(path.join(__dirname, 'public', 'gambar'), {
+  maxAge: '30d',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Cache control for images
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
     }
   }
 }));
@@ -164,28 +195,77 @@ const apiRateLimiter = rateLimit({
 // API ROUTES
 // ====================
 
-// Import routes with error handling
+// Import routes with error handling - each route independently
 let bannerRoutes, categoryRoutes, gameRoutes, voucherRoutes, promoRoutes, searchRoutes, authRoutes, adminRoutes, resellerRoutes, uploadRoutes;
 
 try {
   bannerRoutes = require('./api/routes/banner');
+} catch (error) {
+  console.error('❌ Banner route import error:', error.message);
+  bannerRoutes = express.Router();
+}
+
+try {
   categoryRoutes = require('./api/routes/category');
+} catch (error) {
+  console.error('❌ Category route import error:', error.message);
+  categoryRoutes = express.Router();
+}
+
+try {
   gameRoutes = require('./api/routes/game');
+} catch (error) {
+  console.error('❌ Game route import error:', error.message);
+  gameRoutes = express.Router();
+}
+
+try {
   voucherRoutes = require('./api/routes/voucher');
+} catch (error) {
+  console.error('❌ Voucher route import error:', error.message);
+  voucherRoutes = express.Router();
+}
+
+try {
   promoRoutes = require('./api/routes/promo');
+} catch (error) {
+  console.error('❌ Promo route import error:', error.message);
+  promoRoutes = express.Router();
+}
+
+try {
   searchRoutes = require('./api/routes/search');
+} catch (error) {
+  console.error('❌ Search route import error:', error.message);
+  searchRoutes = express.Router();
+}
+
+try {
   authRoutes = require('./api/routes/auth');
+} catch (error) {
+  console.error('❌ Auth route import error:', error.message);
+  authRoutes = express.Router();
+}
+
+try {
   adminRoutes = require('./api/routes/admin');
+} catch (error) {
+  console.error('❌ Admin route import error:', error.message);
+  adminRoutes = express.Router();
+}
+
+try {
   resellerRoutes = require('./api/routes/reseller');
+} catch (error) {
+  console.error('❌ Reseller route import error:', error.message);
+  resellerRoutes = express.Router();
+}
+
+try {
   uploadRoutes = require('./api/routes/upload');
 } catch (error) {
-  console.error('Route import error:', error.message);
-  // Create fallback router
-  const fallbackRouter = express.Router();
-  fallbackRouter.use((req, res) => {
-    res.status(503).json({ success: false, message: 'Server sedang dalam pemeliharaan' });
-  });
-  bannerRoutes = categoryRoutes = gameRoutes = voucherRoutes = promoRoutes = searchRoutes = authRoutes = adminRoutes = resellerRoutes = uploadRoutes = fallbackRouter;
+  console.error('❌ Upload route import error:', error.message);
+  uploadRoutes = express.Router();
 }
 
 // Apply general API rate limiting
@@ -220,11 +300,12 @@ app.get('/api/health', (req, res) => {
 // FRONTEND STATIC
 // ====================
 
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve gambar folder from public (for production assets)
-app.use('/gambar', express.static(path.join(__dirname, 'public', 'gambar')));
+// Serve static files from public directory with cache
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
+}));
 
 // ====================
 // ERROR HANDLER

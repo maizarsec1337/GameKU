@@ -3,8 +3,6 @@
  * Controller untuk halaman admin dashboard
  */
 
-// In-memory data store untuk development
-
 // Security logging helper
 const logAdminAction = (req, action, details = {}) => {
   console.log(JSON.stringify({
@@ -17,47 +15,11 @@ const logAdminAction = (req, action, details = {}) => {
     ...details
   }));
 };
-const devData = {
-  users: [
-    { id: 1, email: 'admin', name: 'Administrator', role: 'admin', status: 'active', balance: 0 },
-    { id: 2, email: 'user', name: 'Regular User', role: 'user', status: 'active', balance: 50000 },
-    { id: 3, email: 'reseller', name: 'Reseller User', role: 'reseller', status: 'active', balance: 100000 }
-  ],
-  products: [
-    { id: 1, name: 'Mobile Legends Diamond', price: 10000, category: 'topup', stock: 999, status: 'active' },
-    { id: 2, name: 'Free Fire Diamond', price: 10000, category: 'topup', stock: 999, status: 'active' },
-    { id: 3, name: 'Steam Wallet 50k', price: 50000, category: 'steam', stock: 50, status: 'active' },
-    { id: 4, name: 'Google Play Giftcard 50k', price: 50000, category: 'giftcard', stock: 100, status: 'active' }
-  ],
-  orders: [
-    { id: 1, user_id: 2, product_id: 1, status: 'pending', amount: 10000, created_at: new Date() },
-    { id: 2, user_id: 3, product_id: 3, status: 'completed', amount: 50000, created_at: new Date() }
-  ],
-  banners: [
-    { id: 1, title: 'Promo Mobile Legends', image: '/images/banner/ml.jpg', active: true },
-    { id: 2, title: 'Diskon Steam Wallet', image: '/images/banner/steam.jpg', active: true }
-  ],
-  categories: [
-    { id: 1, name: 'Top Up', slug: 'topup', icon: '💎' },
-    { id: 2, name: 'Steam Key', slug: 'steam', icon: '🎮' },
-    { id: 3, name: 'Gift Card', slug: 'giftcard', icon: '🎁' }
-  ],
-  resellers: [
-    { id: 1, name: 'Toko Reseller 1', owner: 'reseller', status: 'approved', balance: 100000 },
-    { id: 2, name: 'Toko Reseller 2', owner: 'user2', status: 'pending', balance: 0 }
-  ],
-  vouchers: [
-    { id: 1, code: 'GAMEKU10', discount: 10, active: true },
-    { id: 2, code: 'GAMEKU20', discount: 20, active: true }
-  ],
-  promos: [
-    { id: 1, title: 'Promo Tahun Baru', discount: 25, active: true },
-    { id: 2, title: 'Flash Sale', discount: 50, active: true }
-  ],
-  withdraws: [
-    { id: 1, reseller_id: 1, amount: 50000, status: 'pending', method: 'bank' },
-    { id: 2, reseller_id: 1, amount: 75000, status: 'approved', method: 'ewallet' }
-  ]
+
+// Sanitize input helper
+const sanitizeInput = (value) => {
+  if (typeof value !== 'string') return value;
+  return value.trim().replace(/[<>]/g, '');
 };
 
 /**
@@ -67,14 +29,30 @@ const devData = {
 const getDashboard = async (req, res) => {
   try {
     const stats = {
-      total_users: devData.users.length,
-      total_products: devData.products.length,
-      total_orders: devData.orders.length,
-      total_resellers: devData.resellers.length,
-      revenue_today: 1500000,
-      orders_pending: devData.orders.filter(o => o.status === 'pending').length,
-      withdraw_pending: devData.withdraws.filter(w => w.status === 'pending').length
+      total_users: 0,
+      total_products: 0,
+      total_orders: 0,
+      total_resellers: 0,
+      revenue_today: 0,
+      orders_pending: 0,
+      withdraw_pending: 0
     };
+    
+    // Try to get real stats from database
+    try {
+      const { User, Product, Order, Reseller } = require('../../models');
+      if (User) stats.total_users = await User.countDocuments().catch(() => 0);
+      if (Product) stats.total_products = await Product.countDocuments({ deletedAt: null }).catch(() => 0);
+      if (Order) stats.total_orders = await Order.countDocuments().catch(() => 0);
+      if (Reseller) stats.total_resellers = await Reseller.countDocuments().catch(() => 0);
+      
+      if (Order) {
+        const pendingOrders = await Order.countDocuments({ status: 'pending' }).catch(() => 0);
+        stats.orders_pending = pendingOrders;
+      }
+    } catch (dbError) {
+      console.warn('Database stats error:', dbError.message);
+    }
     
     res.json({
       success: true,
@@ -89,14 +67,19 @@ const getDashboard = async (req, res) => {
 };
 
 /**
- * User Dashboard
+ * User Management
  * @route GET /api/admin/users
  */
 const getUsers = async (req, res) => {
   try {
+    const { User } = require('../../models');
+    let users = [];
+    if (User) {
+      users = await User.find().select('email fullName role status balance').lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.users
+      data: users
     });
   } catch (error) {
     res.status(500).json({
@@ -106,20 +89,91 @@ const getUsers = async (req, res) => {
   }
 };
 
-/**
- * Reseller Dashboard
- * @route GET /api/admin/resellers
- */
-const getResellers = async (req, res) => {
+// Get all reseller applications with full data for admin verification
+const getResellerApplications = async (req, res) => {
   try {
+    const { Reseller } = require('../../models');
+    let resellers = [];
+    if (Reseller) {
+      resellers = await Reseller.find().lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.resellers
+      data: resellers
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+// Verify reseller application (admin only)
+const verifyResellerApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, rejectionReason } = req.body;
+    const adminId = req.user?.uid || req.user?.email;
+
+    logAdminAction(req, 'RESELLER_VERIFY', {
+      action,
+      targetId: id,
+      adminId
+    });
+
+    const { Reseller, User } = require('../../models');
+    
+    if (Reseller) {
+      const reseller = await Reseller.findById(id);
+      if (!reseller) {
+        return res.status(404).json({
+          success: false,
+          message: 'Permohonan reseller tidak ditemukan'
+        });
+      }
+
+      if (action === 'approve') {
+        reseller.verificationStatus = 'approved';
+        // Update user role to reseller
+        if (User) {
+          await User.findOneAndUpdate(
+            { uid: reseller.userId },
+            { role: 'reseller', 'resellerInfo.resellerStatus': 'approved' }
+          ).catch(() => {});
+        }
+      } else if (action === 'reject') {
+        reseller.verificationStatus = 'rejected';
+        reseller.rejectionReason = sanitizeInput(rejectionReason || 'Tidak memenuhi syarat');
+        // Update user role back to user
+        if (User) {
+          await User.findOneAndUpdate(
+            { uid: reseller.userId },
+            { role: 'user', 'resellerInfo.resellerStatus': 'rejected' }
+          ).catch(() => {});
+        }
+      } else if (action === 'suspend') {
+        reseller.verificationStatus = 'suspended';
+      }
+
+      await reseller.save();
+
+      return res.json({
+        success: true,
+        message: `Reseller berhasil ${action === 'approve' ? 'disetujui' : action === 'reject' ? 'ditolak' : 'ditangguhkan'}`,
+        data: reseller
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Reseller berhasil ${action === 'approve' ? 'disetujui' : action === 'reject' ? 'ditolak' : 'ditangguhkan'}`
+    });
+  } catch (error) {
+    console.error('Verify reseller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal memverifikasi reseller'
     });
   }
 };
@@ -130,9 +184,14 @@ const getResellers = async (req, res) => {
  */
 const getBanners = async (req, res) => {
   try {
+    const { Banner } = require('../../models');
+    let banners = [];
+    if (Banner) {
+      banners = await Banner.find({ deletedAt: null }).sort({ order: 1 }).lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.banners
+      data: banners
     });
   } catch (error) {
     res.status(500).json({
@@ -148,20 +207,28 @@ const getBanners = async (req, res) => {
  */
 const createBanner = async (req, res) => {
   try {
-    const { title, image, link } = req.body;
-    const newBanner = {
-      id: devData.banners.length + 1,
-      title,
-      image,
-      link,
-      active: true
-    };
-    devData.banners.push(newBanner);
+    const { Banner } = require('../../models');
+    const { title, image, link, order } = req.body;
     
+    if (Banner) {
+      const banner = new Banner({
+        title: sanitizeInput(title || ''),
+        image: image || '/gambar/banner/default.jpg',
+        link: sanitizeInput(link || ''),
+        order: parseInt(order) || 0
+      });
+      await banner.save();
+      return res.status(201).json({
+        success: true,
+        message: 'Banner berhasil ditambahkan',
+        data: banner
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Banner berhasil ditambahkan',
-      data: newBanner
+      message: 'Banner berhasil ditambahkan (simulasi)',
+      data: { title, image, link, order }
     });
   } catch (error) {
     res.status(500).json({
@@ -177,9 +244,14 @@ const createBanner = async (req, res) => {
  */
 const getCategories = async (req, res) => {
   try {
+    const { ProductCategory } = require('../../models');
+    let categories = [];
+    if (ProductCategory) {
+      categories = await ProductCategory.find({ deletedAt: null }).lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.categories
+      data: categories
     });
   } catch (error) {
     res.status(500).json({
@@ -195,21 +267,43 @@ const getCategories = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name, slug, icon } = req.body;
-    const newCategory = {
-      id: devData.categories.length + 1,
-      name,
-      slug,
-      icon
-    };
-    devData.categories.push(newCategory);
+    const { ProductCategory } = require('../../models');
+    const { name, slug, icon, categoryType } = req.body;
     
+    if (!name || !slug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nama dan slug wajib diisi'
+      });
+    }
+    
+    if (ProductCategory) {
+      const category = new ProductCategory({
+        name: sanitizeInput(name),
+        slug: sanitizeInput(slug),
+        icon: icon || '📦',
+        categoryType: categoryType || 'topup'
+      });
+      await category.save();
+      return res.status(201).json({
+        success: true,
+        message: 'Kategori berhasil ditambahkan',
+        data: category
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Kategori berhasil ditambahkan',
-      data: newCategory
+      message: 'Kategori berhasil ditambahkan (simulasi)',
+      data: { name, slug, icon }
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Slug sudah digunakan'
+      });
+    }
     res.status(500).json({
       success: false,
       message: error.message
@@ -223,9 +317,14 @@ const createCategory = async (req, res) => {
  */
 const getGames = async (req, res) => {
   try {
+    const { ProductCategory } = require('../../models');
+    let games = [];
+    if (ProductCategory) {
+      games = await ProductCategory.find({ categoryType: 'game', deletedAt: null }).lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.products.filter(p => p.category === 'topup')
+      data: games
     });
   } catch (error) {
     res.status(500).json({
@@ -241,9 +340,14 @@ const getGames = async (req, res) => {
  */
 const getVouchers = async (req, res) => {
   try {
+    const { Voucher } = require('../../models');
+    let vouchers = [];
+    if (Voucher) {
+      vouchers = await Voucher.find({ deletedAt: null }).lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.vouchers
+      data: vouchers
     });
   } catch (error) {
     res.status(500).json({
@@ -259,19 +363,32 @@ const getVouchers = async (req, res) => {
  */
 const createVoucher = async (req, res) => {
   try {
-    const { code, discount, active } = req.body;
-    const newVoucher = {
-      id: devData.vouchers.length + 1,
-      code,
-      discount,
-      active: active !== undefined ? active : true
-    };
-    devData.vouchers.push(newVoucher);
+    const { Voucher } = require('../../models');
+    const { code, discount, active, minPurchase, maxDiscount, expiredAt, limitPerUser, limitTotal } = req.body;
     
+    if (Voucher) {
+      const voucher = new Voucher({
+        code: sanitizeInput(code || ''),
+        discount: parseInt(discount) || 0,
+        minPurchase: parseInt(minPurchase) || 0,
+        maxDiscount: parseInt(maxDiscount) || null,
+        active: active !== undefined ? active : true,
+        expiredAt: expiredAt ? new Date(expiredAt) : null,
+        limitPerUser: parseInt(limitPerUser) || 1,
+        limitTotal: parseInt(limitTotal) || null
+      });
+      await voucher.save();
+      return res.status(201).json({
+        success: true,
+        message: 'Voucher berhasil ditambahkan',
+        data: voucher
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Voucher berhasil ditambahkan',
-      data: newVoucher
+      message: 'Voucher berhasil ditambahkan (simulasi)',
+      data: { code, discount, active }
     });
   } catch (error) {
     res.status(500).json({
@@ -287,9 +404,14 @@ const createVoucher = async (req, res) => {
  */
 const getPromos = async (req, res) => {
   try {
+    const { Promo } = require('../../models');
+    let promos = [];
+    if (Promo) {
+      promos = await Promo.find({ deletedAt: null }).lean().catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.promos
+      data: promos
     });
   } catch (error) {
     res.status(500).json({
@@ -305,19 +427,31 @@ const getPromos = async (req, res) => {
  */
 const createPromo = async (req, res) => {
   try {
-    const { title, discount, active } = req.body;
-    const newPromo = {
-      id: devData.promos.length + 1,
-      title,
-      discount,
-      active: active !== undefined ? active : true
-    };
-    devData.promos.push(newPromo);
+    const { Promo } = require('../../models');
+    const { title, discount, active, description, bannerImage, expiredAt, productIds } = req.body;
     
+    if (Promo) {
+      const promo = new Promo({
+        title: sanitizeInput(title || ''),
+        discount: parseInt(discount) || 0,
+        description: sanitizeInput(description || ''),
+        bannerImage: bannerImage || '',
+        expiredAt: expiredAt ? new Date(expiredAt) : null,
+        productIds: Array.isArray(productIds) ? productIds : [],
+        active: active !== undefined ? active : true
+      });
+      await promo.save();
+      return res.status(201).json({
+        success: true,
+        message: 'Promo berhasil ditambahkan',
+        data: promo
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Promo berhasil ditambahkan',
-      data: newPromo
+      message: 'Promo berhasil ditambahkan (simulasi)',
+      data: { title, discount, active }
     });
   } catch (error) {
     res.status(500).json({
@@ -333,58 +467,18 @@ const createPromo = async (req, res) => {
  */
 const getProducts = async (req, res) => {
   try {
+    const { Product } = require('../../models');
+    let products = [];
+    if (Product) {
+      products = await Product.find({ deletedAt: null })
+        .select('name price stock status sellerId createdAt')
+        .populate('categoryId', 'name')
+        .lean()
+        .catch(() => []);
+    }
     res.json({
       success: true,
-      data: devData.products
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-/**
- * Create Product
- * @route POST /api/admin/products
- */
-const createProduct = async (req, res) => {
-  try {
-    const { name, price, category, stock, image } = req.body;
-    const newProduct = {
-      id: devData.products.length + 1,
-      name,
-      price,
-      category,
-      stock,
-      image,
-      status: 'active'
-    };
-    devData.products.push(newProduct);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Produk berhasil ditambahkan',
-      data: newProduct
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-/**
- * Manage Orders
- * @route GET /api/admin/orders
- */
-const getOrders = async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: devData.orders
+      data: products
     });
   } catch (error) {
     res.status(500).json({
@@ -401,22 +495,61 @@ const getOrders = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, paymentProof } = req.body;
     
-    const orderIndex = devData.orders.findIndex(o => o.id === parseInt(id));
-    if (orderIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pesanan tidak ditemukan'
+    const { Order } = require('../../models');
+    if (Order) {
+      const order = await Order.findById(id);
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Pesanan tidak ditemukan'
+        });
+      }
+      
+      order.status = status;
+      if (paymentProof) {
+        order.paymentProof = paymentProof;
+      }
+      await order.save();
+      
+      return res.json({
+        success: true,
+        message: 'Status pesanan berhasil diupdate',
+        data: order
       });
     }
-    
-    devData.orders[orderIndex].status = status;
-    
+
     res.json({
       success: true,
-      message: 'Status pesanan berhasil diupdate',
-      data: devData.orders[orderIndex]
+      message: 'Status pesanan berhasil diupdate (simulasi)'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Manage Orders
+ * @route GET /api/admin/orders
+ */
+const getOrders = async (req, res) => {
+  try {
+    const { Order } = require('../../models');
+    let orders = [];
+    if (Order) {
+      orders = await Order.find()
+        .sort({ createdAt: -1 })
+        .populate('userId', 'fullName email')
+        .lean()
+        .catch(() => []);
+    }
+    res.json({
+      success: true,
+      data: orders
     });
   } catch (error) {
     res.status(500).json({
@@ -432,9 +565,10 @@ const updateOrderStatus = async (req, res) => {
  */
 const getWithdraws = async (req, res) => {
   try {
+    // Placeholder for withdrawals - no model exists
     res.json({
       success: true,
-      data: devData.withdraws
+      data: []
     });
   } catch (error) {
     res.status(500).json({
@@ -453,20 +587,10 @@ const updateWithdrawStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    const withdrawIndex = devData.withdraws.findIndex(w => w.id === parseInt(id));
-    if (withdrawIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Withdraw tidak ditemukan'
-      });
-    }
-    
-    devData.withdraws[withdrawIndex].status = status;
-    
+    // Placeholder for withdrawals - no model exists
     res.json({
       success: true,
-      message: 'Status withdraw berhasil diupdate',
-      data: devData.withdraws[withdrawIndex]
+      message: 'Status withdraw berhasil diupdate (simulasi)'
     });
   } catch (error) {
     res.status(500).json({
@@ -479,7 +603,8 @@ const updateWithdrawStatus = async (req, res) => {
 module.exports = {
   getDashboard,
   getUsers,
-  getResellers,
+  getResellerApplications,
+  verifyResellerApplication,
   getBanners,
   createBanner,
   getCategories,
@@ -490,7 +615,7 @@ module.exports = {
   getPromos,
   createPromo,
   getProducts,
-  createProduct,
+  createProduct: () => {},
   getOrders,
   updateOrderStatus,
   getWithdraws,

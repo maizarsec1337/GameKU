@@ -55,8 +55,7 @@ function Profile() {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      navigate('/login', { replace: true });
+      await logout(() => navigate('/login', { replace: true }));
     } catch (error) {
       console.error('Logout failed', error);
     }

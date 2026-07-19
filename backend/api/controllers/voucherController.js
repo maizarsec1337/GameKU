@@ -1,39 +1,101 @@
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const { saveFile, deleteFile } = require('../helpers/storageHelper');
+const { cache, CACHE_KEYS } = require('../services/cacheService');
 
-// In-memory data store for development
-let devVouchers = [
-  { id: 1, code: 'GAMEKU10', discount: 10, active: true },
-  { id: 2, code: 'GAMEKU20', discount: 20, active: true }
+// Sanitize input helper
+const sanitizeInput = (value) => {
+  if (typeof value !== 'string') return value;
+  return value.trim().replace(/[<>]/g, '');
+};
+
+// Mock data for development when DB not available
+const getMockVouchers = () => [
+  { _id: 'voucher-1', code: 'GAMEKU20', discount: 20, image: '/gambar/voucher/default.png', active: true, minPurchase: 0, maxDiscount: 50000 },
+  { _id: 'voucher-2', code: 'DISKON10', discount: 10, image: '/gambar/voucher/default.png', active: true, minPurchase: 0, maxDiscount: 30000 },
+  { _id: 'voucher-3', code: 'HEMAT15', discount: 15, image: '/gambar/voucher/default.png', active: true, minPurchase: 0, maxDiscount: 40000 }
 ];
 
-const getVouchers = (req, res) => {
+const getVouchers = async (req, res) => {
   try {
+    // Check cache first
+    const cached = cache.get(CACHE_KEYS.VOUCHERS || 'vouchers');
+    if (cached) {
+      return res.json({
+        success: true,
+        data: cached
+      });
+    }
+
+    const { Voucher } = require('../../models');
+    let vouchers = [];
+    
+    const isDbConnected = Voucher && mongoose.connection.readyState === 1;
+    
+    if (isDbConnected) {
+      vouchers = await Voucher.find({ deletedAt: null, active: true })
+        .select('code discount image active minPurchase maxDiscount expiredAt _id')
+        .lean()
+        .catch(() => []);
+    }
+    
+    // If no data from DB, use mock data for development
+    if (vouchers.length === 0 && process.env.NODE_ENV !== 'production') {
+      vouchers = getMockVouchers();
+    }
+    
+    // Cache for 5 minutes
+    if (vouchers.length > 0) {
+      cache.set(CACHE_KEYS.VOUCHERS || 'vouchers', vouchers, 300);
+    }
+    
     res.json({
       success: true,
-      data: devVouchers.filter(v => v.active)
+      data: vouchers
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('getVouchers error:', error.message);
+    if (process.env.NODE_ENV !== 'production') {
+      return res.json({ success: true, data: getMockVouchers() });
+    }
+    res.status(500).json({ success: false, message: 'Gagal memuat voucher' });
   }
 };
 
-const getVoucherById = (req, res) => {
+const getVoucherById = async (req, res) => {
   try {
-    const voucher = devVouchers.find(v => v.id === parseInt(req.params.id));
-    if (!voucher) {
-      return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
+    const cacheKey = `voucher_${req.params.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached });
     }
-    res.json({ success: true, data: voucher });
+
+    const { Voucher } = require('../../models');
+    if (Voucher && mongoose.connection.readyState === 1) {
+      const voucher = await Voucher.findOne({ _id: req.params.id, deletedAt: null })
+        .select('code discount image active minPurchase maxDiscount expiredAt _id')
+        .lean();
+      if (!voucher) {
+        return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
+      }
+      cache.set(cacheKey, voucher, 300);
+      return res.json({ success: true, data: voucher });
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const voucher = getMockVouchers().find(v => v._id === req.params.id) || getMockVouchers()[0];
+      return res.json({ success: true, data: voucher });
+    }
+    res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Gagal memuat voucher' });
   }
 };
 
 const createVoucher = async (req, res) => {
   try {
-    const { code, discount, active } = req.body;
+    const { Voucher } = require('../../models');
+    const { code, discount, active, minPurchase, maxDiscount, expiredAt, limitPerUser, limitTotal } = req.body;
     
     if (!code) {
       return res.status(400).json({
@@ -42,12 +104,11 @@ const createVoucher = async (req, res) => {
       });
     }
     
-    // Handle file upload (optional image)
-    let imagePath = '/gambar/voucher/googleplay.png'; // Default fallback
+    let imagePath = '/gambar/voucher/default.png';
     
     if (req.file) {
       try {
-        const storagePath = await saveFile(req.file, 'image', 'vouchers');
+        const storagePath = await saveFile(req.file, 'image', 'voucher');
         imagePath = storagePath;
       } catch (uploadError) {
         return res.status(400).json({
@@ -57,20 +118,38 @@ const createVoucher = async (req, res) => {
       }
     }
     
-    const newVoucher = {
-      id: devVouchers.length + 1,
-      code,
-      discount: parseInt(discount) || 0,
-      image: imagePath,
-      active: active !== undefined ? active : true
-    };
+    if (Voucher && mongoose.connection.readyState === 1) {
+      const voucher = new Voucher({
+        code: sanitizeInput(code).toUpperCase(),
+        image: imagePath,
+        active: active !== undefined ? active : true,
+        minPurchase: parseInt(minPurchase) || 0,
+        maxDiscount: maxDiscount ? parseInt(maxDiscount) : null,
+        expiredAt: expiredAt ? new Date(expiredAt) : null,
+        limitPerUser: parseInt(limitPerUser) || 1,
+        limitTotal: limitTotal ? parseInt(limitTotal) : null
+      });
+      const saved = await voucher.save();
+      cache.del(CACHE_KEYS.VOUCHERS || 'vouchers');
+      return res.status(201).json({
+        success: true,
+        message: 'Voucher berhasil ditambahkan',
+        data: { _id: saved._id, code: saved.code, discount: saved.discount }
+      });
+    }
     
-    devVouchers.push(newVoucher);
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(201).json({
+        success: true,
+        message: 'Voucher berhasil ditambahkan (mock)',
+        data: { code, discount, image: imagePath, _id: 'voucher-' + Date.now() }
+      });
+    }
     
     res.status(201).json({
       success: true,
       message: 'Voucher berhasil ditambahkan',
-      data: newVoucher
+      data: { code, discount, image: imagePath }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -79,44 +158,51 @@ const createVoucher = async (req, res) => {
 
 const updateVoucher = async (req, res) => {
   try {
+    const { Voucher } = require('../../models');
     const { id } = req.params;
-    const voucherIndex = devVouchers.findIndex(v => v.id === parseInt(id));
+    const { code, discount, active, minPurchase, maxDiscount, expiredAt, limitPerUser, limitTotal } = req.body;
     
-    if (voucherIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Voucher tidak ditemukan'
-      });
+    if (!Voucher || mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
     }
     
-    const { code, discount, active } = req.body;
+    const voucher = await Voucher.findOne({ _id: id, deletedAt: null });
+    if (!voucher) {
+      return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
+    }
     
     // Handle file upload
     if (req.file) {
       try {
-        const oldImage = devVouchers[voucherIndex].image;
+        const oldImage = voucher.image;
         if (oldImage && oldImage.startsWith('/storage/')) {
           await deleteFile(oldImage);
         }
-        
-        const storagePath = await saveFile(req.file, 'image', 'vouchers');
-        devVouchers[voucherIndex].image = storagePath;
+        const storagePath = await saveFile(req.file, 'image', 'voucher');
+        voucher.image = storagePath;
       } catch (uploadError) {
-        return res.status(400).json({
-          success: false,
-          message: uploadError.message
-        });
+        return res.status(400).json({ success: false, message: uploadError.message });
       }
     }
     
-    if (code !== undefined) devVouchers[voucherIndex].code = code;
-    if (discount !== undefined) devVouchers[voucherIndex].discount = parseInt(discount) || 0;
-    if (active !== undefined) devVouchers[voucherIndex].active = active;
+    if (code !== undefined) voucher.code = sanitizeInput(code).toUpperCase();
+    if (discount !== undefined) voucher.discount = parseInt(discount) || 0;
+    if (active !== undefined) voucher.active = active;
+    if (minPurchase !== undefined) voucher.minPurchase = parseInt(minPurchase) || 0;
+    if (maxDiscount !== undefined) voucher.maxDiscount = maxDiscount ? parseInt(maxDiscount) : null;
+    if (expiredAt !== undefined) voucher.expiredAt = expiredAt ? new Date(expiredAt) : null;
+    if (limitPerUser !== undefined) voucher.limitPerUser = parseInt(limitPerUser) || 1;
+    if (limitTotal !== undefined) voucher.limitTotal = limitTotal ? parseInt(limitTotal) : null;
+    
+    await voucher.save();
+    
+    cache.del(CACHE_KEYS.VOUCHERS || 'vouchers');
+    cache.del(`voucher_${id}`);
     
     res.json({
       success: true,
       message: 'Voucher berhasil diupdate',
-      data: devVouchers[voucherIndex]
+      data: { _id: voucher._id, code: voucher.code, discount: voucher.discount }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -125,22 +211,30 @@ const updateVoucher = async (req, res) => {
 
 const deleteVoucher = async (req, res) => {
   try {
+    const { Voucher } = require('../../models');
     const { id } = req.params;
-    const voucherIndex = devVouchers.findIndex(v => v.id === parseInt(id));
     
-    if (voucherIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Voucher tidak ditemukan'
-      });
+    if (!Voucher || mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
     }
     
-    const image = devVouchers[voucherIndex].image;
+    const voucher = await Voucher.findOne({ _id: id, deletedAt: null });
+    
+    if (!voucher) {
+      return res.status(404).json({ success: false, message: 'Voucher tidak ditemukan' });
+    }
+    
+    const image = voucher.image;
     if (image && image.startsWith('/storage/')) {
       await deleteFile(image);
     }
     
-    devVouchers.splice(voucherIndex, 1);
+    // Soft delete
+    voucher.deletedAt = new Date();
+    await voucher.save();
+    
+    cache.del(CACHE_KEYS.VOUCHERS || 'vouchers');
+    cache.del(`voucher_${id}`);
     
     res.json({
       success: true,

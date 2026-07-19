@@ -12,16 +12,15 @@ function UserLayout() {
     navigate('/login', { replace: true });
   };
 
-  const menuItems = [
-    { path: '/user', label: 'Dashboard', icon: '📊' },
-    { path: '/user/orders', label: 'Pesanan Saya', icon: '🛒' },
-    { path: '/user/wishlist', label: 'Wishlist', icon: '❤️' },
-    { path: '/user/addresses', label: 'Alamat', icon: '📍' },
-    { path: '/user/vouchers', label: 'Voucher Saya', icon: '🎫' },
-    { path: '/user/payment-methods', label: 'Metode Pembayaran', icon: '💳' },
-    { path: '/user/notifications', label: 'Notifikasi', icon: '🔔' },
-    { path: '/user/settings', label: 'Pengaturan', icon: '⚙️' },
-  ];
+const menuItems = [
+  { path: '/user', label: 'Dashboard', icon: '📊' },
+  { path: '/user/profile', label: 'Profil', icon: '👤' },
+  { path: '/user/edit-profile', label: 'Edit Profil', icon: '✏️' },
+  { path: '/user/wishlist', label: 'Wishlist', icon: '❤️' },
+  { path: '/user/orders', label: 'Riwayat Order', icon: '🛒' },
+  { path: '/user/settings', label: 'Pengaturan', icon: '⚙️' },
+  { path: '/user/become-reseller', label: 'Daftar Menjadi Reseller', icon: '🏪' },
+];
 
   return (
     <div className="user-layout">

@@ -4,21 +4,6 @@ import { authAPI } from '../services/authAPI';
 import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import firebaseConfig from '../config/firebase';
-
-// Initialize Firebase
-let firebaseApp;
-let firebaseAuth;
-
-try {
-  firebaseApp = initializeApp(firebaseConfig);
-  firebaseAuth = getAuth(firebaseApp);
-} catch (e) {
-  // Firebase already initialized
-  firebaseAuth = getAuth();
-}
 
 function Register() {
   const navigate = useNavigate();
@@ -116,33 +101,10 @@ function Register() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      
-      const result = await signInWithPopup(firebaseAuth, provider);
-      const idToken = await result.user.getIdToken();
-      
-      // Send ID token to backend for verification
-      const response = await authAPI.googleLogin(idToken);
-      const respData = response.data || response;
-      
-      if (respData && respData.success && respData.token) {
-        localStorage.setItem('token', respData.token);
-        await checkAuth();
-        navigate('/user', { replace: true });
-      } else {
-        setErrors({ submit: respData?.message || 'Registrasi Google gagal' });
-      }
+      // Redirect to backend Google OAuth endpoint
+      window.location.href = '/api/auth/google';
     } catch (error) {
-      console.error('Google login popup error:', error);
-      if (error.code === 'auth/popup-blocked') {
-        setErrors({ submit: 'Popup diblokir. Silakan izinkan popup di browser Anda.' });
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        // User cancelled, no error message
-      } else if (error.response?.data?.message) {
-        setErrors({ submit: error.response.data.message });
-      } else {
-        setErrors({ submit: 'Registrasi Google gagal. Silakan coba lagi.' });
-      }
+      setErrors({ submit: 'Registrasi Google gagal. Silakan coba lagi.' });
     } finally {
       setLoading(false);
     }

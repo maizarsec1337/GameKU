@@ -8,7 +8,8 @@ const router = express.Router();
 const { 
   getDashboard,
   getUsers,
-  getResellers,
+  getResellerApplications,
+  verifyResellerApplication,
   getBanners,
   createBanner,
   getCategories,
@@ -26,6 +27,7 @@ const {
   updateWithdrawStatus
 } = require('../controllers/adminController');
 const { authMiddleware, roleMiddleware } = require('../middleware');
+const { uploadBanner, uploadVoucher, uploadPromo, uploadCategory } = require('../middleware/uploadMiddleware');
 
 // Apply auth middleware untuk semua route admin
 router.use(authMiddleware);
@@ -38,26 +40,27 @@ router.get('/dashboard', getDashboard);
 router.get('/users', getUsers);
 
 // Reseller Management
-router.get('/resellers', getResellers);
+router.get('/resellers', getResellerApplications);
+router.put('/resellers/:id/verify', verifyResellerApplication);
 
-// Banner Management
+// Banner Management - with upload middleware
 router.get('/banners', getBanners);
-router.post('/banners', createBanner);
+router.post('/banners', uploadBanner, createBanner);
 
-// Category Management
+// Category Management - with upload middleware
 router.get('/categories', getCategories);
-router.post('/categories', createCategory);
+router.post('/categories', uploadCategory, createCategory);
 
 // Game Management
 router.get('/games', getGames);
 
-// Voucher Management
+// Voucher Management - with upload middleware
 router.get('/vouchers', getVouchers);
-router.post('/vouchers', createVoucher);
+router.post('/vouchers', uploadVoucher, createVoucher);
 
-// Promo Management
+// Promo Management - with upload middleware
 router.get('/promos', getPromos);
-router.post('/promos', createPromo);
+router.post('/promos', uploadPromo, createPromo);
 
 // Product Management
 router.get('/products', getProducts);

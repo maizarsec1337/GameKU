@@ -4,21 +4,6 @@ import { authAPI } from '../services/authAPI';
 import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import '../css/auth.css';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import firebaseConfig from '../config/firebase';
-
-// Initialize Firebase
-let firebaseApp;
-let firebaseAuth;
-
-try {
-  firebaseApp = initializeApp(firebaseConfig);
-  firebaseAuth = getAuth(firebaseApp);
-} catch (e) {
-  // Firebase already initialized
-  firebaseAuth = getAuth();
-}
 
 function Login() {
   const navigate = useNavigate();
@@ -34,10 +19,10 @@ function Login() {
   const [authProcessing, setAuthProcessing] = useState(false);
 
   // Get checkAuth and user from context
-  const { checkAuth, user } = useAuth();
+  const { checkAuth, user: contextUser } = useAuth();
 
+  // Handle Google OAuth callback (token from URL)
   useEffect(() => {
-    // Handle Google OAuth callback
     const handleGoogleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
@@ -161,46 +146,10 @@ function Login() {
   const handleGoogleLogin = async () => {
     setAuthProcessing(true);
     try {
-      const provider = new GoogleAuthProvider();
-      
-      const result = await signInWithPopup(firebaseAuth, provider);
-      const idToken = await result.user.getIdToken();
-      
-      // Send ID token to backend for verification
-      const response = await authAPI.googleLogin(idToken);
-      const data = response.data || response;
-      
-      if (data && data.success && data.token) {
-        // Store token
-        localStorage.setItem('token', data.token);
-        sessionStorage.setItem('loginSuccess', 'true');
-        
-        // Update user state via context
-        await checkAuth();
-        
-        // Redirect based on role - use data from response to avoid race condition
-        const role = data.user.role;
-        if (role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else if (role === 'reseller') {
-          navigate('/reseller', { replace: true });
-        } else {
-          navigate('/user', { replace: true });
-        }
-      } else {
-        setErrors({ submit: data?.message || 'Login Google gagal' });
-      }
+      // Redirect to backend Google OAuth endpoint
+      window.location.href = '/api/auth/google';
     } catch (error) {
-      console.error('Google login popup error:', error);
-      if (error.code === 'auth/popup-blocked') {
-        setErrors({ submit: 'Popup diblokir. Silakan izinkan popup di browser Anda.' });
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        setErrors({ submit: 'Login Google dibatalkan' });
-      } else if (error.response?.data?.message) {
-        setErrors({ submit: error.response.data.message });
-      } else {
-        setErrors({ submit: 'Login Google gagal. Silakan coba lagi.' });
-      }
+      setErrors({ submit: 'Login Google gagal. Silakan coba lagi.' });
     } finally {
       setAuthProcessing(false);
     }

@@ -1,39 +1,101 @@
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const { saveFile, deleteFile } = require('../helpers/storageHelper');
+const { cache, CACHE_KEYS } = require('../services/cacheService');
 
-// In-memory data store for development
-let devPromos = [
-  { id: 1, title: 'Promo Tahun Baru', image: '/gambar/promo/flashsale.png', discount: 25, active: true },
-  { id: 2, title: 'Flash Sale', image: '/gambar/promo/bonus.png', discount: 50, active: true }
+// Sanitize input helper
+const sanitizeInput = (value) => {
+  if (typeof value !== 'string') return value;
+  return value.trim().replace(/[<>]/g, '');
+};
+
+// Mock data for development when DB not available
+const getMockPromos = () => [
+  { _id: 'promo-1', title: 'Promo Banner 1', image: '/gambar/promo/default.jpg', discount: 20, description: 'Diskon 20% untuk semua produk', active: true },
+  { _id: 'promo-2', title: 'Promo Banner 2', image: '/gambar/promo/default.jpg', discount: 10, description: 'Diskon 10% untuk produk tertentu', active: true },
+  { _id: 'promo-3', title: 'Promo Banner 3', image: '/gambar/promo/default.jpg', discount: 15, description: 'Diskon 15% untuk kategori tertentu', active: true }
 ];
 
-const getPromos = (req, res) => {
+const getPromos = async (req, res) => {
   try {
+    // Check cache first
+    const cached = cache.get(CACHE_KEYS.PROMOS || 'promos');
+    if (cached) {
+      return res.json({
+        success: true,
+        data: cached
+      });
+    }
+
+    const { Promo } = require('../../models');
+    let promos = [];
+    
+    const isDbConnected = Promo && mongoose.connection.readyState === 1;
+    
+    if (isDbConnected) {
+      promos = await Promo.find({ deletedAt: null, active: true })
+        .select('title image discount description expiredAt productIds _id')
+        .lean()
+        .catch(() => []);
+    }
+    
+    // If no data from DB, use mock data for development
+    if (promos.length === 0 && process.env.NODE_ENV !== 'production') {
+      promos = getMockPromos();
+    }
+    
+    // Cache for 5 minutes
+    if (promos.length > 0) {
+      cache.set(CACHE_KEYS.PROMOS || 'promos', promos, 300);
+    }
+    
     res.json({
       success: true,
-      data: devPromos.filter(p => p.active)
+      data: promos
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('getPromos error:', error.message);
+    if (process.env.NODE_ENV !== 'production') {
+      return res.json({ success: true, data: getMockPromos() });
+    }
+    res.status(500).json({ success: false, message: 'Gagal memuat promo' });
   }
 };
 
-const getPromoById = (req, res) => {
+const getPromoById = async (req, res) => {
   try {
-    const promo = devPromos.find(p => p.id === parseInt(req.params.id));
-    if (!promo) {
-      return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
+    const cacheKey = `promo_${req.params.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached });
     }
-    res.json({ success: true, data: promo });
+
+    const { Promo } = require('../../models');
+    if (Promo && mongoose.connection.readyState === 1) {
+      const promo = await Promo.findOne({ _id: req.params.id, deletedAt: null })
+        .select('title image discount description expiredAt productIds _id')
+        .lean();
+      if (!promo) {
+        return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
+      }
+      cache.set(cacheKey, promo, 300);
+      return res.json({ success: true, data: promo });
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const promo = getMockPromos().find(p => p._id === req.params.id) || getMockPromos()[0];
+      return res.json({ success: true, data: promo });
+    }
+    res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Gagal memuat promo' });
   }
 };
 
 const createPromo = async (req, res) => {
   try {
-    const { title, discount } = req.body;
+    const { Promo } = require('../../models');
+    const { title, discount, active, description, expiredAt, productIds } = req.body;
     
     if (!title) {
       return res.status(400).json({
@@ -42,12 +104,11 @@ const createPromo = async (req, res) => {
       });
     }
     
-    // Handle file upload
-    let imagePath = '/gambar/promo/flashsale.png'; // Default fallback
+    let imagePath = '/gambar/promo/default.png';
     
     if (req.file) {
       try {
-        const storagePath = await saveFile(req.file, 'image', 'promos');
+        const storagePath = await saveFile(req.file, 'image', 'promo');
         imagePath = storagePath;
       } catch (uploadError) {
         return res.status(400).json({
@@ -57,20 +118,37 @@ const createPromo = async (req, res) => {
       }
     }
     
-    const newPromo = {
-      id: devPromos.length + 1,
-      title,
-      image: imagePath,
-      discount: parseInt(discount) || 0,
-      active: true
-    };
+    if (Promo && mongoose.connection.readyState === 1) {
+      const promo = new Promo({
+        title: sanitizeInput(title),
+        image: imagePath,
+        discount: parseInt(discount) || 0,
+        description: sanitizeInput(description || ''),
+        expiredAt: expiredAt ? new Date(expiredAt) : null,
+        productIds: Array.isArray(productIds) ? productIds : [],
+        active: active !== undefined ? active : true
+      });
+      const saved = await promo.save();
+      cache.del(CACHE_KEYS.PROMOS || 'promos');
+      return res.status(201).json({
+        success: true,
+        message: 'Promo berhasil ditambahkan',
+        data: { _id: saved._id, title: saved.title, discount: saved.discount }
+      });
+    }
     
-    devPromos.push(newPromo);
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(201).json({
+        success: true,
+        message: 'Promo berhasil ditambahkan (mock)',
+        data: { title, discount, image: imagePath, _id: 'promo-' + Date.now() }
+      });
+    }
     
     res.status(201).json({
       success: true,
       message: 'Promo berhasil ditambahkan',
-      data: newPromo
+      data: { title, discount: imagePath }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -79,44 +157,48 @@ const createPromo = async (req, res) => {
 
 const updatePromo = async (req, res) => {
   try {
+    const { Promo } = require('../../models');
     const { id } = req.params;
-    const promoIndex = devPromos.findIndex(p => p.id === parseInt(id));
+    const { title, discount, active, description, expiredAt, productIds } = req.body;
     
-    if (promoIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Promo tidak ditemukan'
-      });
+    if (!Promo || mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
     }
     
-    const { title, discount, active } = req.body;
+    const promo = await Promo.findOne({ _id: id, deletedAt: null });
+    if (!promo) {
+      return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
+    }
     
-    // Handle file upload
     if (req.file) {
       try {
-        const oldImage = devPromos[promoIndex].image;
+        const oldImage = promo.image;
         if (oldImage && oldImage.startsWith('/storage/')) {
           await deleteFile(oldImage);
         }
-        
-        const storagePath = await saveFile(req.file, 'image', 'promos');
-        devPromos[promoIndex].image = storagePath;
+        const storagePath = await saveFile(req.file, 'image', 'promo');
+        promo.image = storagePath;
       } catch (uploadError) {
-        return res.status(400).json({
-          success: false,
-          message: uploadError.message
-        });
+        return res.status(400).json({ success: false, message: uploadError.message });
       }
     }
     
-    if (title !== undefined) devPromos[promoIndex].title = title;
-    if (discount !== undefined) devPromos[promoIndex].discount = parseInt(discount) || 0;
-    if (active !== undefined) devPromos[promoIndex].active = active;
+    if (title !== undefined) promo.title = sanitizeInput(title);
+    if (discount !== undefined) promo.discount = parseInt(discount) || 0;
+    if (active !== undefined) promo.active = active;
+    if (description !== undefined) promo.description = sanitizeInput(description);
+    if (expiredAt !== undefined) promo.expiredAt = expiredAt ? new Date(expiredAt) : null;
+    if (productIds !== undefined) promo.productIds = Array.isArray(productIds) ? productIds : [];
+    
+    await promo.save();
+    
+    cache.del(CACHE_KEYS.PROMOS || 'promos');
+    cache.del(`promo_${id}`);
     
     res.json({
       success: true,
       message: 'Promo berhasil diupdate',
-      data: devPromos[promoIndex]
+      data: { _id: promo._id, title: promo.title, discount: promo.discount }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -125,22 +207,29 @@ const updatePromo = async (req, res) => {
 
 const deletePromo = async (req, res) => {
   try {
+    const { Promo } = require('../../models');
     const { id } = req.params;
-    const promoIndex = devPromos.findIndex(p => p.id === parseInt(id));
     
-    if (promoIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Promo tidak ditemukan'
-      });
+    if (!Promo || mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
     }
     
-    const image = devPromos[promoIndex].image;
+    const promo = await Promo.findOne({ _id: id, deletedAt: null });
+    
+    if (!promo) {
+      return res.status(404).json({ success: false, message: 'Promo tidak ditemukan' });
+    }
+    
+    const image = promo.image;
     if (image && image.startsWith('/storage/')) {
       await deleteFile(image);
     }
     
-    devPromos.splice(promoIndex, 1);
+    promo.deletedAt = new Date();
+    await promo.save();
+    
+    cache.del(CACHE_KEYS.PROMOS || 'promos');
+    cache.del(`promo_${id}`);
     
     res.json({
       success: true,

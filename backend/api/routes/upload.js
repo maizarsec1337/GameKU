@@ -11,7 +11,8 @@ const {
   uploadSelfie,
   uploadDocument,
   uploadChat,
-  uploadReview
+  uploadReview,
+  uploadGame
 } = require('../middleware/uploadMiddleware');
 const { saveFile } = require('../helpers/storageHelper');
 
@@ -26,7 +27,24 @@ const handleSingleUpload = (storageType) => {
         });
       }
       
-      const storagePath = await saveFile(req.file, 'image', storageType);
+      // Map storage types to match STORAGE_DIRS keys
+      const storageTypeMap = {
+        'avatars': 'profile',
+        'products': 'product', 
+        'banners': 'banner',
+        'promos': 'promo',
+        'vouchers': 'voucher',
+        'categories': 'category',
+        'reviews': 'review',
+        'ktp': 'ktp',
+        'selfie': 'selfie',
+        'chat': 'chat',
+        'documents': 'documents',
+        'games': 'games'
+      };
+      
+      const mappedType = storageTypeMap[storageType] || storageType;
+      const storagePath = await saveFile(req.file, 'image', mappedType);
       
       res.json({
         success: true,
@@ -45,37 +63,40 @@ const handleSingleUpload = (storageType) => {
   };
 };
 
-// Avatar upload
+// Avatar upload - maps to profile directory
 router.post('/avatar', uploadAvatar, handleSingleUpload('avatars'));
 
-// Product image upload
+// Product image upload - maps to product directory
 router.post('/product', uploadProduct, handleSingleUpload('products'));
 
-// Banner upload
+// Banner upload - maps to banner directory
 router.post('/banner', uploadBanner, handleSingleUpload('banners'));
 
-// Promo upload
+// Promo upload - maps to promo directory
 router.post('/promo', uploadPromo, handleSingleUpload('promos'));
 
-// Voucher upload
+// Voucher upload - maps to voucher directory
 router.post('/voucher', uploadVoucher, handleSingleUpload('vouchers'));
 
-// Category upload
+// Category upload - maps to category directory
 router.post('/category', uploadCategory, handleSingleUpload('categories'));
 
-// KTP upload
+// KTP upload - maps to ktp directory
 router.post('/ktp', uploadKTP, handleSingleUpload('ktp'));
 
-// Selfie upload
+// Selfie upload - maps to selfie directory
 router.post('/selfie', uploadSelfie, handleSingleUpload('selfie'));
 
-// Document upload
+// Document upload - maps to documents directory
 router.post('/document', uploadDocument, handleSingleUpload('documents'));
 
-// Chat image upload
+// Chat image upload - maps to chat directory
 router.post('/chat', uploadChat, handleSingleUpload('chat'));
 
-// Review image upload
+// Review image upload - maps to review directory
 router.post('/review', uploadReview, handleSingleUpload('reviews'));
+
+// Game upload - maps to games directory
+router.post('/game', uploadGame, handleSingleUpload('games'));
 
 module.exports = router;

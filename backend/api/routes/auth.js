@@ -1,3 +1,8 @@
+/**
+ * Auth Routes
+ * Route untuk autentikasi pengguna
+ */
+
 const express = require('express');
 const router = express.Router();
 const { 
@@ -10,11 +15,11 @@ const {
   forgotPassword, 
   resetPassword,
   registerReseller,
-  getResellerStatus
+  getResellerStatus,
+  updateProfile,
+  getUserProfile
 } = require('../controllers/authController');
-
-// TODO:
-// Import middleware authMiddleware untuk route protection
+const { authMiddleware } = require('../middleware');
 
 // Route untuk registrasi
 router.post('/register', register);
@@ -22,12 +27,8 @@ router.post('/register', register);
 // Route untuk login
 router.post('/login', login);
 
-// Route untuk Firebase Google Login
-router.post('/google', googleLogin);
-// Legacy route - redirect to Firebase flow
-router.get('/google', (req, res) => {
-  res.redirect(`${process.env.CORS_ORIGIN}/login`);
-});
+// Route untuk Google OAuth - redirect ke Google OAuth
+router.get('/google', googleLogin);
 router.get('/google/callback', googleCallback);
 
 // Route untuk logout
@@ -41,6 +42,10 @@ router.post('/forgot-password', forgotPassword);
 
 // Route untuk reset password
 router.post('/reset-password', resetPassword);
+
+// Route untuk profile (protected)
+router.get('/user/profile', authMiddleware, getUserProfile);
+router.put('/user/profile', authMiddleware, updateProfile);
 
 // Route untuk reseller
 router.post('/reseller', registerReseller);

@@ -8,21 +8,16 @@ const {
   deleteCategory 
 } = require('../controllers/categoryController');
 const { uploadCategory } = require('../middleware/uploadMiddleware');
+const { authMiddleware, roleMiddleware } = require('../middleware');
 
-// Get all categories
+// Public routes
 router.get('/', getCategories);
-
-// Get category by ID
 router.get('/:id', getCategoryById);
 
-// Create category with image upload
-router.post('/', uploadCategory, createCategory);
-
-// Update category with optional image upload
-router.put('/:id', uploadCategory, updateCategory);
-router.patch('/:id', uploadCategory, updateCategory);
-
-// Delete category
-router.delete('/:id', deleteCategory);
+// Admin routes
+router.post('/', authMiddleware, roleMiddleware('admin'), uploadCategory, createCategory);
+router.put('/:id', authMiddleware, roleMiddleware('admin'), uploadCategory, updateCategory);
+router.patch('/:id', authMiddleware, roleMiddleware('admin'), uploadCategory, updateCategory);
+router.delete('/:id', authMiddleware, roleMiddleware('admin'), deleteCategory);
 
 module.exports = router;

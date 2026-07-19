@@ -241,6 +241,11 @@
   color: white;
 }
 
+.status-badge.suspended {
+  background: #6c757d;
+  color: white;
+}
+
 .admin-btn {
   padding: 8px 16px;
   border-radius: 4px;
@@ -268,6 +273,29 @@
   background: #219a52;
 }
 
+.admin-btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+.admin-btn-danger:hover {
+  background: #c0392b;
+}
+
+.admin-btn-warning {
+  background: #f39c12;
+  color: white;
+}
+
+.admin-btn-warning:hover {
+  background: #e67e22;
+}
+
+.admin-btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .admin-form {
   background: #f8f9fa;
   padding: 20px;
@@ -275,32 +303,137 @@
   margin-bottom: 20px;
 }
 
-.admin-form-group {
+.form-group {
   margin-bottom: 15px;
 }
 
-.admin-form-group label {
+.form-group label {
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
 }
 
-.admin-form-group input,
-.admin-form-group select {
+.form-group input,
+.form-group select,
+.form-group textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
 }
 
-.admin-select {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 5px;
+  display: block;
 }
 
 .admin-loading {
   text-align: center;
   padding: 40px;
   color: #666;
+}
+
+.admin-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+.admin-card-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.admin-card-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.admin-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.admin-link {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e1e8ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-close:hover {
+  color: #2c3e50;
+}
+
+.modal-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.admin-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.admin-link {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
 }

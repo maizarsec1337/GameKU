@@ -10,12 +10,21 @@ import './css/responsive.css';
 import './css/auth.css';
 import './css/admin.css';
 
+// Preload critical assets
+const preloadAssets = () => {
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'image';
+  link.href = '/gambar/logo/icon.png';
+  document.head.appendChild(link);
+};
+
+preloadAssets();
+
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>
 );

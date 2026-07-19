@@ -1,33 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import assets from '../config/assetConfig';
 import ProductCard from '../components/ProductCard';
 import ImageWithFallback from '../components/ImageWithFallback';
-
-// ====================
-// API SERVICE
-// ====================
-
-const API_BASE = '/api';
-
-const apiService = {
-  async get(endpoint) {
-    try {
-      const response = await fetch(`${API_BASE}${endpoint}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  }
-};
+import apiService from '../services/apiService';
+import { dataCache, CACHE_KEYS } from '../services/dataCache';
+import { SkeletonBanner, SkeletonCategory, SkeletonProductCard, SkeletonPromo } from '../components/SkeletonLoader';
 
 function Home() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Data states
   const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [topupGames, setTopupGames] = useState([]);
@@ -36,7 +22,17 @@ function Home() {
   const [vouchers, setVouchers] = useState([]);
   const [giftCards, setGiftCards] = useState([]);
   const [promos, setPromos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Individual loading states for progressive rendering
+  const [bannersLoading, setBannersLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [topupLoading, setTopupLoading] = useState(true);
+  const [steamLoading, setSteamLoading] = useState(true);
+  const [minecraftLoading, setMinecraftLoading] = useState(true);
+  const [voucherLoading, setVoucherLoading] = useState(true);
+  const [giftcardLoading, setGiftcardLoading] = useState(true);
+  const [promoLoading, setPromoLoading] = useState(true);
+  
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
   const carouselRefs = {
@@ -53,100 +49,179 @@ function Home() {
   const [expandedSections, setExpandedSections] = useState({});
   const [closingSections, setClosingSections] = useState({});
 
-  // Fetch data dari Backend API
+  // Prefetch cache - store for immediate navigation
   useEffect(() => {
+    // Prefetch data untuk halaman lain saat idle
+    const prefetchData = async () => {
+      const cache = dataCache;
+      
+      // Prefetch topup, voucher, steam, minecraft data
+      const prefetchPromises = [
+        apiService.get('/game?category=topup', false),
+        apiService.get('/category/voucher', false),
+        apiService.get('/game?category=steam', false),
+        apiService.get('/category/minecraft', false)
+      ];
+      
+      await Promise.allSettled(prefetchPromises);
+    };
+    
+    // Delay prefetch sampai browser idle
+    const idleCallback = setTimeout(prefetchData, 2000);
+    return () => clearTimeout(idleCallback);
+  }, []);
+
+  // Fetch data dengan parallel loading + cache
+  useEffect(() => {
+    // Check if data sudah ada di cache
+    const cachedBanners = dataCache.get(CACHE_KEYS.BANNERS);
+    const cachedCategories = dataCache.get(CACHE_KEYS.CATEGORIES);
+    const cachedTopup = dataCache.get(CACHE_KEYS.TOPUP_PRODUCTS);
+    const cachedSteam = dataCache.get(CACHE_KEYS.STEAM_PRODUCTS);
+    const cachedMinecraft = dataCache.get(CACHE_KEYS.MINECRAFT_PRODUCTS);
+    const cachedVouchers = dataCache.get(CACHE_KEYS.VOUCHERS);
+    const cachedPromos = dataCache.get(CACHE_KEYS.PROMOS);
+    
+    // Set cached data immediately
+    if (cachedBanners?.success && Array.isArray(cachedBanners.data)) {
+      setBanners(cachedBanners.data);
+      setBannersLoading(false);
+    }
+    if (cachedCategories?.success && Array.isArray(cachedCategories.data)) {
+      setCategories(cachedCategories.data);
+      setCategoriesLoading(false);
+    }
+
+    // Parallel fetch semua data sekaligus
     const fetchData = async () => {
-      try {
-        const [
-          bannersData,
-          categoriesData,
-          topupData,
-          steamData,
-          minecraftData,
-          voucherData,
-          giftcardData,
-          promoData
-        ] = await Promise.all([
-          apiService.get('/banner'),
-          apiService.get('/category'),
-          apiService.get('/game?category=topup'),
-          apiService.get('/game?category=steam'),
-          apiService.get('/category/minecraft'),
-          apiService.get('/voucher'),
-          apiService.get('/category/giftcard'),
-          apiService.get('/promo')
-        ]);
-
-        if (bannersData && bannersData.success && Array.isArray(bannersData.data)) {
-          setBanners(bannersData.data);
-        }
-
-        if (categoriesData && categoriesData.success && Array.isArray(categoriesData.data)) {
-          setCategories(categoriesData.data);
-        }
-
-        if (topupData && topupData.success && Array.isArray(topupData.data)) {
-          setTopupGames(topupData.data);
-        }
-
-        if (steamData && steamData.success && Array.isArray(steamData.data)) {
-          setSteamKeys(steamData.data);
-        }
-
-        if (minecraftData && minecraftData.success && Array.isArray(minecraftData.products)) {
-          setMinecraftProducts(minecraftData.products);
-        }
-
-        if (voucherData && voucherData.success && Array.isArray(voucherData.data)) {
-          setVouchers(voucherData.data);
-        }
-
-        if (giftcardData && giftcardData.success && Array.isArray(giftcardData.products)) {
-          setGiftCards(giftcardData.products);
-        } else if (giftcardData && giftcardData.success && Array.isArray(giftcardData.data)) {
-          setGiftCards(giftcardData.data);
-        }
-
-        if (promoData && promoData.success && Array.isArray(promoData.data)) {
-          setPromos(promoData.data);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
+      const fetchPromises = [];
+      
+      // Banner
+      if (!cachedBanners) {
+        fetchPromises.push(
+          apiService.get('/banner').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setBanners(data.data);
+            }
+            setBannersLoading(false);
+          }).catch(() => setBannersLoading(false))
+        );
       }
+      
+      // Categories
+      if (!cachedCategories) {
+        fetchPromises.push(
+          apiService.get('/category').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setCategories(data.data);
+            }
+            setCategoriesLoading(false);
+          }).catch(() => setCategoriesLoading(false))
+        );
+      }
+      
+      // Topup products
+      if (!cachedTopup) {
+        fetchPromises.push(
+          apiService.get('/game?category=topup').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setTopupGames(data.data);
+            }
+            setTopupLoading(false);
+          }).catch(() => setTopupLoading(false))
+        );
+      }
+      
+      // Steam products
+      if (!cachedSteam) {
+        fetchPromises.push(
+          apiService.get('/game?category=steam').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setSteamKeys(data.data);
+            }
+            setSteamLoading(false);
+          }).catch(() => setSteamLoading(false))
+        );
+      }
+      
+      // Minecraft products
+      if (!cachedMinecraft) {
+        fetchPromises.push(
+          apiService.get('/category/minecraft').then(data => {
+            if (data?.success && Array.isArray(data.products)) {
+              setMinecraftProducts(data.products);
+            } else if (data?.success && Array.isArray(data.data)) {
+              setMinecraftProducts(data.data);
+            }
+            setMinecraftLoading(false);
+          }).catch(() => setMinecraftLoading(false))
+        );
+      }
+      
+      // Vouchers
+      if (!cachedVouchers) {
+        fetchPromises.push(
+          apiService.get('/voucher').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setVouchers(data.data);
+            }
+            setVoucherLoading(false);
+          }).catch(() => setVoucherLoading(false))
+        );
+      }
+      
+      // Gift cards
+      fetchPromises.push(
+        apiService.get('/category/giftcard').then(data => {
+          if (data?.success && Array.isArray(data.products)) {
+            setGiftCards(data.products);
+          } else if (data?.success && Array.isArray(data.data)) {
+            setGiftCards(data.data);
+          }
+          setGiftcardLoading(false);
+        }).catch(() => setGiftcardLoading(false))
+      );
+      
+      // Promos
+      if (!cachedPromos) {
+        fetchPromises.push(
+          apiService.get('/promo').then(data => {
+            if (data?.success && Array.isArray(data.data)) {
+              setPromos(data.data);
+            }
+            setPromoLoading(false);
+          }).catch(() => setPromoLoading(false))
+        );
+      }
+
+      // Wait semua request selesai (tidak perlu menunggu semua untuk render)
+      await Promise.allSettled(fetchPromises);
     };
 
     fetchData();
   }, []);
 
-  const toggleSection = (key) => {
+  const toggleSection = useCallback((key) => {
     if (expandedSections[key]) {
-      // Menutup: animasi halus lalu kembalikan ke carousel
       setClosingSections((prev) => ({ ...prev, [key]: true }));
       setTimeout(() => {
         setClosingSections((prev) => ({ ...prev, [key]: false }));
         setExpandedSections((prev) => ({ ...prev, [key]: false }));
       }, 320);
     } else {
-      // Membuka: langsung tampilkan semua card dalam grid
       setExpandedSections((prev) => ({ ...prev, [key]: true }));
     }
-  };
+  }, [expandedSections]);
 
-  // ====================
-  // HANDLERS
-  // ====================
-
-  const toggleMenu = () => {
+  const toggleMenu = useCallback(() => {
     setMenuOpen(!menuOpen);
-  };
+  }, [menuOpen]);
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setMenuOpen(false);
-  };
+  }, []);
 
-  const scrollCarousel = (refName, direction) => {
+  const scrollCarousel = useCallback((refName, direction) => {
     const ref = carouselRefs[refName];
     if (ref && ref.current) {
       if (refName === 'banner') {
@@ -165,18 +240,17 @@ function Home() {
         }
       }
     }
-  };
-
-  // ====================
-  // NAVBAR
-  // ====================
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const renderNavbar = () => (
+  // ====================
+  // NAVBAR - Memoized
+  // ====================
+  const renderNavbar = useMemo(() => (
     <nav className="navbar">
       <div className="container">
         <Link to="/" className="navbar-logo">
@@ -241,12 +315,11 @@ function Home() {
         </div>
       </div>
     </nav>
-  );
+  ), [menuOpen, user, navigate, toggleMenu, closeMenu, handleLogout]);
 
   // ====================
   // BANNER AUTO SLIDE
   // ====================
-
   useEffect(() => {
     if (banners.length > 1) {
       const interval = setInterval(() => {
@@ -259,8 +332,7 @@ function Home() {
   // ====================
   // BANNER CAROUSEL
   // ====================
-
-  const renderBanner = () => (
+  const renderBanner = useMemo(() => (
     <section className="banner-section">
       <div className="container">
         <div className="banner-carousel" ref={carouselRefs.banner}>
@@ -274,7 +346,7 @@ function Home() {
               }}>
                 {banners.map((banner, index) => (
                   <div className="banner-slide" key={banner._id || banner.id || index}>
-                    <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} />
+                    <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} type="banner" />
                   </div>
                 ))}
               </div>
@@ -288,19 +360,20 @@ function Home() {
                 ))}
               </div>
             </>
+          ) : bannersLoading ? (
+            <SkeletonBanner count={1} />
           ) : (
-            <div className="loading-state" style={{ height: '180px' }}>Memuat banner...</div>
+            <div style={{ height: '180px' }}></div> // Empty placeholder
           )}
         </div>
       </div>
     </section>
-  );
+  ), [banners, currentBannerIndex, bannersLoading]);
 
   // ====================
   // CATEGORY ICONS
   // ====================
-
-  const renderCategories = () => (
+  const renderCategories = useMemo(() => (
     <section className="section-categories">
       <div className="container">
         <div className="categories-row">
@@ -313,22 +386,18 @@ function Home() {
                 <span className="category-name">{cat.name}</span>
               </Link>
             ))
-          ) : (
-            <div className="loading-state">Memuat kategori...</div>
-          )}
+          ) : categoriesLoading ? (
+            <SkeletonCategory count={8} />
+          ) : null}
         </div>
       </div>
     </section>
-  );
+  ), [categories, categoriesLoading]);
 
   // ====================
   // CAROUSEL SECTION
   // ====================
-
-  const renderCarouselSection = (title, subtitle, data, gridClassName, viewAllLink, sectionKey) => {
-    const isExpanded = !!expandedSections[gridClassName];
-    const isClosing = !!closingSections[gridClassName];
-
+  const CarouselSection = memo(({ title, subtitle, data, gridClassName, isExpanded, isClosing, onToggle, onScrollPrev, onScrollNext }) => {
     return (
       <section className="section">
         <div className="container">
@@ -341,7 +410,7 @@ function Home() {
               <button
                 type="button"
                 className={`btn-view-all ${isExpanded ? 'is-expanded' : ''}`}
-                onClick={() => toggleSection(gridClassName)}
+                onClick={onToggle}
                 aria-expanded={isExpanded}
               >
                 <span>{isExpanded ? 'Tampilkan Lebih Sedikit' : 'Lihat Semua'}</span>
@@ -357,25 +426,23 @@ function Home() {
             <div className={`product-grid ${gridClassName} ${isClosing ? 'grid-closing' : 'grid-opening'}`} key={gridClassName}>
               {data.length > 0 ? (
                 data.map((item) => (
-                 <ProductCard
-                      key={item.id || item._id}
-                      id={item.id || item._id}
-                      name={item.name}
-                      image={item.image}
-                      price={item.price || 'Rp0'}
-                      category={item.category}
-                      platform={item.category}
-                      originalPrice={item.originalPrice}
-                      discount={item.discount}
-                    />
+                  <ProductCard
+                    key={item.id || item._id}
+                    id={item.id || item._id}
+                    name={item.name}
+                    image={item.image}
+                    price={item.price || 'Rp0'}
+                    category={item.category}
+                    platform={item.category}
+                    originalPrice={item.originalPrice}
+                    discount={item.discount}
+                  />
                 ))
-              ) : (
-                <div className="empty-state">Tidak ada produk tersedia</div>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="carousel-wrapper">
-              <button className="carousel-btn carousel-prev" onClick={() => scrollCarousel(gridClassName, -1)}>
+              <button className="carousel-btn carousel-prev" onClick={onScrollPrev}>
                 ‹
               </button>
               <div className={`product-carousel ${gridClassName}`} ref={carouselRefs[gridClassName]}>
@@ -393,11 +460,9 @@ function Home() {
                       discount={item.discount}
                     />
                   ))
-                ) : (
-                  <div className="loading-state">Memuat produk...</div>
-                )}
+                ) : null}
               </div>
-              <button className="carousel-btn carousel-next" onClick={() => scrollCarousel(gridClassName, 1)}>
+              <button className="carousel-btn carousel-next" onClick={onScrollNext}>
                 ›
               </button>
             </div>
@@ -405,93 +470,97 @@ function Home() {
         </div>
       </section>
     );
-  };
+  });
 
   // ====================
-  // TOP UP GAMES SECTION (Official Product)
+  // TOP UP GAMES SECTION
   // ====================
-
-  const renderTopUpGames = () => {
-    const topupData = topupGames.length > 0 ? topupGames : [];
-
-    return renderCarouselSection(
-      'Top Up Games',
-      'Produk Official GameKU - Mobile Legends, Free Fire, PUBG, Valorant, Roblox, Growtopia',
-      topupData,
-      'topup',
-      '/category/topup'
-    );
-  };
-
-  // ====================
-  // RANDOM STEAM KEY SECTION (Marketplace Product)
-  // ====================
-
-  const renderSteamKeys = () => {
-    const steamData = steamKeys.length > 0 ? steamKeys : [];
-
-    return renderCarouselSection(
-      'Random Steam Key',
-      'Produk dari Marketplace Seller - Steam Wallet & Game Key',
-      steamData,
-      'steam',
-      '/category/steam'
-    );
-  };
+  const renderTopUpGames = useMemo(() => (
+    <CarouselSection
+      title="Top Up Games"
+      subtitle="Produk Official GameKU - Mobile Legends, Free Fire, PUBG, Valorant, Roblox, Growtopia"
+      data={topupGames}
+      gridClassName="topup"
+      isExpanded={!!expandedSections['topup']}
+      isClosing={!!closingSections['topup']}
+      onToggle={() => toggleSection('topup')}
+      onScrollPrev={() => scrollCarousel('topup', -1)}
+      onScrollNext={() => scrollCarousel('topup', 1)}
+    />
+  ), [topupGames, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
   // ====================
-  // MINECRAFT MARKETPLACE SECTION
+  // STEAM KEYS SECTION
   // ====================
+  const renderSteamKeys = useMemo(() => (
+    <CarouselSection
+      title="Random Steam Key"
+      subtitle="Produk dari Marketplace Seller - Steam Wallet & Game Key"
+      data={steamKeys}
+      gridClassName="steam"
+      isExpanded={!!expandedSections['steam']}
+      isClosing={!!closingSections['steam']}
+      onToggle={() => toggleSection('steam')}
+      onScrollPrev={() => scrollCarousel('steam', -1)}
+      onScrollNext={() => scrollCarousel('steam', 1)}
+    />
+  ), [steamKeys, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
-  const renderMinecraft = () => {
-    const minecraftData = minecraftProducts.length > 0 ? minecraftProducts : [];
-
-    return renderCarouselSection(
-      'Minecraft Marketplace',
-      'Akun, Shared Account, Minecoin, Server, Jasa Build, Plugin, Resource Pack',
-      minecraftData,
-      'minecraft',
-      '/category/minecraft'
-    );
-  };
+  // ====================
+  // MINECRAFT SECTION
+  // ====================
+  const renderMinecraft = useMemo(() => (
+    <CarouselSection
+      title="Minecraft Marketplace"
+      subtitle="Akun, Shared Account, Minecoin, Server, Jasa Build, Plugin, Resource Pack"
+      data={minecraftProducts}
+      gridClassName="minecraft"
+      isExpanded={!!expandedSections['minecraft']}
+      isClosing={!!closingSections['minecraft']}
+      onToggle={() => toggleSection('minecraft')}
+      onScrollPrev={() => scrollCarousel('minecraft', -1)}
+      onScrollNext={() => scrollCarousel('minecraft', 1)}
+    />
+  ), [minecraftProducts, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
   // ====================
   // VOUCHER SECTION
   // ====================
-
-  const renderVoucherSection = () => {
-    const voucherData = vouchers.length > 0 ? vouchers : [];
-
-    return renderCarouselSection(
-      'Voucher Game',
-      'Voucher untuk berbagai platform game',
-      voucherData,
-      'voucher',
-      '/category/voucher'
-    );
-  };
+  const renderVoucherSection = useMemo(() => (
+    <CarouselSection
+      title="Voucher Game"
+      subtitle="Voucher untuk berbagai platform game"
+      data={vouchers}
+      gridClassName="voucher"
+      isExpanded={!!expandedSections['voucher']}
+      isClosing={!!closingSections['voucher']}
+      onToggle={() => toggleSection('voucher')}
+      onScrollPrev={() => scrollCarousel('voucher', -1)}
+      onScrollNext={() => scrollCarousel('voucher', 1)}
+    />
+  ), [vouchers, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
   // ====================
   // GIFT CARD SECTION
   // ====================
-
-  const renderGiftCardSection = () => {
-    const giftcardData = giftCards.length > 0 ? giftCards : [];
-
-    return renderCarouselSection(
-      'Gift Card',
-      'Gift card untuk hiburan digital',
-      giftcardData,
-      'giftcard',
-      '/category/giftcard'
-    );
-  };
+  const renderGiftCardSection = useMemo(() => (
+    <CarouselSection
+      title="Gift Card"
+      subtitle="Gift card untuk hiburan digital"
+      data={giftCards}
+      gridClassName="giftcard"
+      isExpanded={!!expandedSections['giftcard']}
+      isClosing={!!closingSections['giftcard']}
+      onToggle={() => toggleSection('giftcard')}
+      onScrollPrev={() => scrollCarousel('giftcard', -1)}
+      onScrollNext={() => scrollCarousel('giftcard', 1)}
+    />
+  ), [giftCards, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
   // ====================
   // PROMO SECTION
   // ====================
-
-  const renderPromoSection = () => (
+  const renderPromoSection = useMemo(() => (
     <section className="section">
       <div className="container">
         <div className="section-header">
@@ -529,9 +598,7 @@ function Home() {
                   discount={item.discount}
                 />
               ))
-            ) : (
-              <div className="loading-state">Memuat promo...</div>
-            )}
+            ) : null}
           </div>
           <button className="carousel-btn carousel-next" onClick={() => scrollCarousel('promo', 1)}>
             ›
@@ -539,25 +606,12 @@ function Home() {
         </div>
       </div>
     </section>
-  );
+  ), [promos, scrollCarousel]);
 
   // ====================
-  // LOADING STATE
+  // FOOTER - Memoized
   // ====================
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner">Memuat...</div>
-      </div>
-    );
-  }
-
-  // ====================
-  // FOOTER
-  // ====================
-
-  const renderFooter = () => (
+  const renderFooter = useMemo(() => (
     <footer className="footer">
       <div className="container">
         <div className="footer-grid">
@@ -617,26 +671,25 @@ function Home() {
         </div>
       </div>
     </footer>
-  );
+  ), []);
 
   // ====================
   // RENDER
   // ====================
-
   return (
     <>
-      {renderNavbar()}
-      {renderBanner()}
-      {renderCategories()}
-      {renderTopUpGames()}
-      {renderSteamKeys()}
-      {renderMinecraft()}
-      {renderVoucherSection()}
-      {renderGiftCardSection()}
-      {renderPromoSection()}
-      {renderFooter()}
+      {renderNavbar}
+      {renderBanner}
+      {renderCategories}
+      {renderTopUpGames}
+      {renderSteamKeys}
+      {renderMinecraft}
+      {renderVoucherSection}
+      {renderGiftCardSection}
+      {renderPromoSection}
+      {renderFooter}
     </>
   );
 }
 
-export default Home;
+export default memo(Home);

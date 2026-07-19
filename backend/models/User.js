@@ -105,6 +105,10 @@ const UserSchema = new mongoose.Schema({
     }
   },
   // Security fields
+  password: {
+    type: String,
+    maxlength: [255, 'Password too long']
+  },
   lastLoginAt: Date,
   passwordChangedAt: Date,
   passwordResetToken: String,
@@ -115,7 +119,6 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-UserSchema.index({ email: 1 });
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
 

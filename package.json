@@ -7,8 +7,11 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
-    "build": "node build.js",
-    "start": "cd backend && npm start"
+    "dev:safe": "node kill-port.js && npm run dev",
+    "start": "cd backend && npm start",
+    "start:safe": "node kill-port.js && npm start",
+    "kill-port": "node kill-port.js",
+    "build": "node build.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

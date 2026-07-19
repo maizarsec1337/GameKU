@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Optimize React refresh
+      fastRefresh: true,
+    })
+  ],
   server: {
     port: 5173,
     proxy: {
@@ -27,15 +32,46 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          utils: ['axios']
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'utils': ['axios'],
+          // Split by route
+          'pages-admin': [
+            '/src/pages/admin/Dashboard',
+            '/src/pages/admin/Users',
+            '/src/pages/admin/Products'
+          ],
+          'pages-user': [
+            '/src/pages/user/Dashboard',
+            '/src/pages/user/Profile'
+          ],
+          'pages-reseller': [
+            '/src/pages/reseller/Dashboard',
+            '/src/pages/reseller/Products'
+          ]
         }
       }
+    },
+    chunkSizeWarningLimit: 1000,
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Preload optimizations
+    modulePreload: {
+      polyfill: true
     }
   },
+  // Preload optimizations
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom']
+  },
   // Base public path - important for production
-  base: '/'
+  base: '/',
+  // CSS optimization
+  css: {
+    devSourcemap: false
+  }
 });

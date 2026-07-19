@@ -7,43 +7,31 @@ const {
   updateResellerProduct, 
   deleteResellerProduct,
   updateStock,
-  uploadKyc
+  uploadKyc,
+  registerReseller,
+  getResellerStatus,
+  getResellerProfile
 } = require('../controllers/resellerController');
-const { uploadProduct, uploadKTP, uploadSelfie, uploadDocument } = require('../middleware/uploadMiddleware');
-const multer = require('multer');
+const { uploadKYC, uploadProduct, uploadKTP, uploadSelfie, uploadStoreLogo } = require('../middleware/uploadMiddleware');
+const { authMiddleware, roleMiddleware } = require('../middleware');
 
-// Configure multer for multiple file uploads
-const uploadKycFields = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const dest = file.fieldname === 'ktpPhoto' ? 'ktp' : 
-                   file.fieldname === 'selfiePhoto' ? 'selfie' : 'documents';
-      cb(null, require('path').join(__dirname, '..', '..', 'storage', dest));
-    },
-    filename: (req, file, cb) => {
-      const crypto = require('crypto');
-      const ext = require('path').extname(file.originalname).toLowerCase();
-      cb(null, crypto.randomBytes(16).toString('hex') + Date.now() + ext);
-    }
-  })
-}).fields([
-  { name: 'ktpPhoto', maxCount: 1 },
-  { name: 'selfiePhoto', maxCount: 1 },
-  { name: 'document', maxCount: 1 }
-]);
+// User registration routes (public)
+router.post('/register', registerReseller);
+router.get('/status', getResellerStatus);
+router.get('/profile', getResellerProfile);
 
-// Products
-router.get('/products', getResellerProducts);
-router.get('/products/:id', getResellerProductById);
-router.post('/products', uploadProduct, createResellerProduct);
-router.put('/products/:id', uploadProduct, updateResellerProduct);
-router.patch('/products/:id', uploadProduct, updateResellerProduct);
-router.delete('/products/:id', deleteResellerProduct);
+// Products - require reseller role
+router.get('/products', authMiddleware, roleMiddleware('reseller'), getResellerProducts);
+router.get('/products/:id', authMiddleware, roleMiddleware('reseller'), getResellerProductById);
+router.post('/products', authMiddleware, roleMiddleware('reseller'), uploadProduct, createResellerProduct);
+router.put('/products/:id', authMiddleware, roleMiddleware('reseller'), uploadProduct, updateResellerProduct);
+router.patch('/products/:id', authMiddleware, roleMiddleware('reseller'), uploadProduct, updateResellerProduct);
+router.delete('/products/:id', authMiddleware, roleMiddleware('reseller'), deleteResellerProduct);
 
 // Stock
-router.put('/products/:id/stock', updateStock);
+router.put('/products/:id/stock', authMiddleware, roleMiddleware('reseller'), updateStock);
 
-// KYC upload
-router.post('/kyc', uploadKycFields, uploadKyc);
+// KYC upload (legacy)
+router.post('/kyc', authMiddleware, roleMiddleware('reseller'), uploadKYC, uploadKyc);
 
 module.exports = router;

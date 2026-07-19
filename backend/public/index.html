@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta name="description" content="Gameku - Digital Gaming Store. Top Up Game, Voucher Game, Steam Wallet, Gift Card, Membership, Google Play, Playstation, Xbox, Nintendo, Entertainment." />
     <meta name="keywords" content="gameku, top up game, voucher game, steam wallet, gift card, gaming store" />
     <meta name="author" content="Gameku" />
@@ -10,13 +14,24 @@
     <meta property="og:description" content="Tempat terbaik untuk top up game, voucher, dan kebutuhan gaming lainnya." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://gameku.com" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" as="image" href="/gambar/logo/Glogo.png" />
+    <link rel="preload" as="font" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" crossorigin />
+    
+    <link rel="icon" type="image/png" href="/gambar/logo/Glogo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-    <title>Gameku - Digital Gaming Store</title>
-    <script type="module" crossorigin src="/assets/index-cvY2nuFV.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-pXvRfcOb.css">
+    <title>Gameku</title>
+    <script type="module" crossorigin src="/assets/index-Cv0-Bnvo.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-gtwaPI5p.js">
+    <link rel="modulepreload" crossorigin href="/assets/utils-DhXgJQ-f.js">
+    <link rel="modulepreload" crossorigin href="/assets/pages-admin-BUlmE8Hg.js">
+    <link rel="modulepreload" crossorigin href="/assets/pages-user-BOwpT0Ej.js">
+    <link rel="modulepreload" crossorigin href="/assets/pages-reseller-CnpbqyPc.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BbxTztU5.css">
   </head>
   <body>
     <div id="root"></div>

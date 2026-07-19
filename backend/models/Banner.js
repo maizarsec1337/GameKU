@@ -19,6 +19,14 @@ const BannerSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  order: {
+    type: Number,
+    default: 0
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -27,6 +35,8 @@ const BannerSchema = new mongoose.Schema({
 
 // Indexes
 BannerSchema.index({ active: 1 });
+BannerSchema.index({ order: 1 });
+BannerSchema.index({ deletedAt: 1 });
 
 // Prevent NoSQL injection
 BannerSchema.pre('validate', function(next) {

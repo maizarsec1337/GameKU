@@ -21,6 +21,21 @@ const PromoSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  description: {
+    type: String,
+    maxlength: [500, 'Description too long']
+  },
+  expiredAt: {
+    type: Date
+  },
+  productIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }],
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -29,6 +44,8 @@ const PromoSchema = new mongoose.Schema({
 
 // Indexes
 PromoSchema.index({ active: 1 });
+PromoSchema.index({ expiredAt: 1 });
+PromoSchema.index({ deletedAt: 1 });
 
 // Prevent NoSQL injection
 PromoSchema.pre('validate', function(next) {

@@ -8,21 +8,16 @@ const {
   deleteVoucher 
 } = require('../controllers/voucherController');
 const { uploadVoucher } = require('../middleware/uploadMiddleware');
+const { authMiddleware, roleMiddleware } = require('../middleware');
 
-// Get all active vouchers
+// Public routes
 router.get('/', getVouchers);
-
-// Get voucher by ID
 router.get('/:id', getVoucherById);
 
-// Create voucher with optional image upload
-router.post('/', uploadVoucher, createVoucher);
-
-// Update voucher with optional image upload
-router.put('/:id', uploadVoucher, updateVoucher);
-router.patch('/:id', uploadVoucher, updateVoucher);
-
-// Delete voucher
-router.delete('/:id', deleteVoucher);
+// Admin routes
+router.post('/', authMiddleware, roleMiddleware('admin'), uploadVoucher, createVoucher);
+router.put('/:id', authMiddleware, roleMiddleware('admin'), uploadVoucher, updateVoucher);
+router.patch('/:id', authMiddleware, roleMiddleware('admin'), uploadVoucher, updateVoucher);
+router.delete('/:id', authMiddleware, roleMiddleware('admin'), deleteVoucher);
 
 module.exports = router;

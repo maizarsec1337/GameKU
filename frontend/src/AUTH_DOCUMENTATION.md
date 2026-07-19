@@ -2,12 +2,12 @@
 
 ## Status Implementasi Frontend
 
-Frontend sudah memiliki struktur autentikasi yang lengkap dan siap untuk integrasi dengan Firebase Authentication via Backend.
+Frontend sudah memiliki struktur autentikasi yang lengkap dan siap untuk backend JWT Authentication.
 
 ## Struktur Frontend yang Sudah Siap
 
 ### 1. frontend/src/services/authAPI.js
-**Status:** ✅ Sudah lengkap
+**Status:** ✅ Sudah diupdate
 **Keterangan:** API service untuk semua endpoint autentikasi
 **Endpoint yang tersedia:**
 - `register(data)` - POST /api/auth/register
@@ -27,7 +27,7 @@ Frontend sudah memiliki struktur autentikasi yang lengkap dan siap untuk integra
 **Fitur yang tersedia:**
 - State management untuk user, loading, error
 - Method login, register, googleLogin, logout, checkAuth
-- Refresh Session placeholder (perlu dihubungkan ke API)
+- Menggunakan pure backend JWT (tidak menggunakan Firebase Client SDK lagi)
 
 ### 3. frontend/src/components/RouteProtection.jsx
 **Status:** ✅ Sudah dibuat
@@ -40,54 +40,97 @@ Frontend sudah memiliki struktur autentikasi yang lengkap dan siap untuk integra
 - `UserRoute` - Route khusus user biasa
 
 ### 4. frontend/src/pages/Login.jsx
-**Status:** ✅ Sudah lengkap
+**Status:** ✅ Sudah diupdate
 **Fitur:**
 - Form login dengan email/password
 - Validasi form
 - Error handling
-- Google login button
+- Google OAuth redirect button (menggunakan backend redirect)
 - Loading state
 
 ### 5. frontend/src/pages/Register.jsx
-**Status:** ✅ Sudah lengkap
+**Status:** ✅ Sudah diupdate
 **Fitur:**
 - Form register lengkap
-- Google OAuth callback handling
+- Google OAuth redirect button (menggunakan backend redirect)
 - Validasi form
 - Error handling
 - Loading state
 
 ### 6. frontend/src/pages/Profile.jsx
-**Status:** ✅ Sudah lengkap
+**Status:** ✅ Sudah diupdate
 **Fitur:**
 - Menampilkan data user
 - Reseller registration form
 - Logout functionality
 - Loading state
 
-### 7. frontend/src/pages/ForgotPassword.jsx
-**Status:** ✅ Sudah lengkap
-**Fitur:**
-- Form input email
-- Loading state
-- Success message
-
-### 8. frontend/src/pages/ResetPassword.jsx
-**Status:** ✅ Sudah lengkap
-**Fitur:**
-- Form reset password
-- Token validation
-- Loading state
-- Success message
-
-### 9. frontend/src/main.jsx
+### 7. frontend/src/main.jsx
 **Status:** ✅ Sudah diupdate
 **Keterangan:** Sudah menambahkan AuthProvider wrapper
 
-## Yang Perlu Dihubungkan (Opsional)
+## Alur Autentikasi (Diperbarui)
 
-### AuthContext.jsx
-- `refreshSession()` perlu dihubungkan ke endpoint refresh token backend jika tersedia
+### Login dengan Google Flow
+
+1. **Frontend:** User klik tombol "Masuk dengan Google"
+2. **Frontend:** Redirect ke `/api/auth/google` (backend)
+3. **Backend:** Redirect ke Google OAuth (atau buat mock user jika DEV_MODE)
+4. **Google:** Tampilkan halaman login
+5. **Google:** Redirect ke `/api/auth/google/callback` dengan kode otorisasi
+6. **Backend:** 
+   - Exchange kode ke token
+   - Verifikasi token Google
+   - Cari/buat user di MongoDB
+   - Generate JWT token
+   - Redirect ke frontend dengan token di URL parameter
+7. **Frontend:** Login.jsx menangkap token dari URL
+8. **Frontend:** Simpan token ke localStorage
+9. **Frontend:** Panggil `/api/auth/me` untuk dapat data user
+10. **Frontend:** Update state user di context
+11. **Frontend:** Redirect ke dashboard sesuai role
+
+## Perubahan yang Dilakukan
+
+### ✅ Frontend (authContext.jsx)
+- Menghapus Firebase Client SDK (`onAuthStateChanged`)
+- Menggunakan backend `/api/auth/me` untuk cek status login
+- `googleLogin()` redirect ke backend `/api/auth/google`
+
+### ✅ Frontend (Login.jsx, Register.jsx)
+- Menghapus Firebase popup (`signInWithPopup`)
+- Menggunakan redirect ke backend Google OAuth
+- Menangkap token dari URL parameter setelah callback
+
+### ✅ Frontend (package.json)
+- Menghapus dependency `firebase` (tidak diperlukan lagi)
+
+### ✅ Backend (authController.js)
+- Menghapus Firebase Admin SDK dependency untuk register/login
+- Menggunakan MongoDB + bcrypt untuk autentikasi email/password
+- Google OAuth menggunakan flow redirect (bukan Firebase ID token)
+- Dev mode support untuk Google OAuth mock
+
+### ✅ Backend (.env)
+- Menambahkan placeholder untuk Google OAuth credentials
+- `DEV_MODE=true` untuk development mode
+
+### ✅ Backend (User.js)
+- Menambahkan field `password` untuk bcrypt hash
+
+## Konfigurasi yang Diperlukan
+
+### Backend (.env) - untuk Production
+```
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
+```
+
+### Frontend (.env)
+```
+VITE_API_URL=/api
+```
 
 ## Yang Tidak Perlu Diubah Lagi
 

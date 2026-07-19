@@ -22,6 +22,29 @@ const VoucherSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  minPurchase: {
+    type: Number,
+    default: 0
+  },
+  maxDiscount: {
+    type: Number,
+    default: null
+  },
+  expiredAt: {
+    type: Date
+  },
+  limitPerUser: {
+    type: Number,
+    default: 1
+  },
+  limitTotal: {
+    type: Number,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -29,8 +52,9 @@ const VoucherSchema = new mongoose.Schema({
 });
 
 // Indexes
-VoucherSchema.index({ code: 1 });
 VoucherSchema.index({ active: 1 });
+VoucherSchema.index({ expiredAt: 1 });
+VoucherSchema.index({ deletedAt: 1 });
 
 // Prevent NoSQL injection
 VoucherSchema.pre('validate', function(next) {

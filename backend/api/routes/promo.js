@@ -8,21 +8,16 @@ const {
   deletePromo 
 } = require('../controllers/promoController');
 const { uploadPromo } = require('../middleware/uploadMiddleware');
+const { authMiddleware, roleMiddleware } = require('../middleware');
 
-// Get all active promos
+// Public routes
 router.get('/', getPromos);
-
-// Get promo by ID
 router.get('/:id', getPromoById);
 
-// Create promo with image upload
-router.post('/', uploadPromo, createPromo);
-
-// Update promo with optional image upload
-router.put('/:id', uploadPromo, updatePromo);
-router.patch('/:id', uploadPromo, updatePromo);
-
-// Delete promo
-router.delete('/:id', deletePromo);
+// Admin routes
+router.post('/', authMiddleware, roleMiddleware('admin'), uploadPromo, createPromo);
+router.put('/:id', authMiddleware, roleMiddleware('admin'), uploadPromo, updatePromo);
+router.patch('/:id', authMiddleware, roleMiddleware('admin'), uploadPromo, updatePromo);
+router.delete('/:id', authMiddleware, roleMiddleware('admin'), deletePromo);
 
 module.exports = router;
