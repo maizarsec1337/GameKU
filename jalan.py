@@ -1248,9 +1248,22 @@ def dapatkan_branch_aktif() -> str:
         )
         if hasil.returncode == 0 and hasil.stdout.strip():
             return hasil.stdout.strip()
-        return "main"  # Default ke main jika tidak bisa dideteksi
+        # Jika gagal, coba dapatkan HEAD symbolic ref
+        try:
+            hasil_head = subprocess.run(
+                ["git", "symbolic-ref", "--short", "HEAD"],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if hasil_head.returncode == 0 and hasil_head.stdout.strip():
+                return hasil_head.stdout.strip()
+        except Exception:
+            pass
+        return "unknown"  # Fallback aman jika tidak bisa dideteksi
     except Exception:
-        return "main"
+        return "unknown"
 
 
 def push_github() -> None:
@@ -1305,7 +1318,8 @@ def push_github() -> None:
             print(f"{warna_hijau}Remote GitHub terdeteksi.{ANSI_RESET}")
         else:
             # 5. Jika URL berbeda, tanyakan pengguna
-            print(f"{warna_kuning}URL remote saat ini: {remote_url}{ANSI_RESET}")
+            remote_url_curr = remote_url if remote_url else "tidak diketahui"
+            print(f"{warna_kuning}URL remote saat ini: {remote_url_curr}{ANSI_RESET}")
             print(f"{warna_kuning}URL yang diharapkan: {remote_yang_diharapkan}{ANSI_RESET}")
             print()
             print("Apakah Anda ingin mengganti remote origin?")
@@ -1447,16 +1461,20 @@ def push_github() -> None:
     # 10. Deteksi user dan home directory yang tepat
     user_aktif, user_home = dapatkan_user_home()
     
-    # 11. Tampilkan informasi sebelum git push
+    # 11. Dapatkan branch aktif secara otomatis
+    branch_aktif = dapatkan_branch_aktif()
+    
+    # 12. Tampilkan informasi sebelum git push
     print()
     print(f"{warna_kuning}User Aktif        : {user_aktif}{ANSI_RESET}")
     print(f"{warna_kuning}Home User         : {user_home}{ANSI_RESET}")
     print(f"{warna_kuning}HOME Environment  : {os.environ.get('HOME', os.environ.get('USERPROFILE', 'Tidak diset'))}{ANSI_RESET}")
     print(f"{warna_kuning}Working Directory : {PROJECT_ROOT}{ANSI_RESET}")
-    print(f"{warna_kuning}Remote URL        : {remote_url if origin_ada else remote_yang_diharapkan}{ANSI_RESET}")
+    remote_url_display = remote_url if origin_ada and remote_url else remote_yang_diharapkan
+    print(f"{warna_kuning}Remote URL        : {remote_url_display}{ANSI_RESET}")
     print(f"{warna_kuning}Branch aktif      : {branch_aktif}{ANSI_RESET}")
     
-    # 12. Jalankan git push
+    # 13. Jalankan git push
     print()
     print(f"{warna_kuning}Menjalankan: git push origin {branch_aktif}{ANSI_RESET}")
     perintah_push = ["push", "origin", branch_aktif]
