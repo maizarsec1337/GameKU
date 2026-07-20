@@ -1143,7 +1143,7 @@ def install_perbaiki_dependency() -> None:
 
 
 def push_github() -> None:
-    """Push project ke GitHub dengan validasi SSH lengkap"""
+    """Push project ke GitHub"""
     warna_hijau = "\033[38;2;100;255;150m"
     warna_merah = "\033[38;2;255;100;100m"
     warna_kuning = "\033[38;2;255;255;100m"
@@ -1376,162 +1376,7 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek status Git: {e}{ANSI_RESET}")
         return
     
-    # 7. Validasi SSH GitHub host key
-    print()
-    print(f"{warna_kuning}Memvalidasi SSH GitHub...{ANSI_RESET}")
-    
-    ssh_dir = Path.home() / ".ssh"
-    ssh_dir_exists = ssh_dir.exists() and ssh_dir.is_dir()
-    
-    if not ssh_dir_exists:
-        print(f"{warna_kuning}Folder ~/.ssh tidak ditemukan. Membuat folder ~/.ssh...{ANSI_RESET}")
-        try:
-            ssh_dir.mkdir(parents=True, exist_ok=True)
-            # Set proper permissions (Linux only)
-            if SYSTEM_OS == "Linux":
-                os.chmod(str(ssh_dir), 0o700)
-        except Exception as e:
-            print(f"{warna_merah}Gagal membuat folder ~/.ssh: {e}{ANSI_RESET}")
-            # Lanjutkan ke push saja
-    
-    known_hosts_path = ssh_dir / "known_hosts"
-    
-    # Periksa apakah github.com sudah ada di known_hosts
-    github_in_known_hosts = False
-    try:
-        if known_hosts_path.exists():
-            hasil_ssh_keygen = subprocess.run(
-                ["ssh-keygen", "-F", "github.com"],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if hasil_ssh_keygen.returncode == 0:
-                github_in_known_hosts = True
-    except Exception:
-        # Pada Windows, ssh-keygen mungkin tidak ada atau gagal
-        # Cek file known_hosts secara manual
-        try:
-            if known_hosts_path.exists():
-                with open(known_hosts_path, 'r') as f:
-                    content = f.read()
-                    if "github.com" in content:
-                        github_in_known_hosts = True
-        except Exception:
-            pass
-    
-    # Jika github.com belum ada di known_hosts, tambahkan otomatis
-    if not github_in_known_hosts:
-        print(f"{warna_kuning}Menambahkan GitHub ke known_hosts...{ANSI_RESET}")
-        try:
-            # Buat file known_hosts jika belum ada
-            if not known_hosts_path.exists():
-                known_hosts_path.touch()
-                print(f"{warna_hijau}File known_hosts dibuat.{ANSI_RESET}")
-            
-            # Tambahkan host key GitHub menggunakan ssh-keyscan
-            hasil_keyscan = subprocess.run(
-                ["ssh-keyscan", "-H", "github.com"],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if hasil_keyscan.returncode != 0:
-                print(f"{warna_merah}Penyebab: Tidak dapat menambahkan GitHub host key - {hasil_keyscan.stderr}{ANSI_RESET}")
-                print(f"{warna_merah}Solusi: Pastikan koneksi internet tersedia dan ssh-keyscan terpasang.{ANSI_RESET}")
-                return
-            
-            # Tambahkan ke known_hosts
-            with open(known_hosts_path, 'a') as f:
-                f.write(hasil_keyscan.stdout)
-            
-            print(f"{warna_hijau}GitHub host key berhasil ditambahkan ke known_hosts.{ANSI_RESET}")
-        except subprocess.TimeoutExpired:
-            print(f"{warna_merah}Timeout: ssh-keyscan terlalu lama.{ANSI_RESET}")
-            return
-        except FileNotFoundError:
-            print(f"{warna_merah}ssh-keyscan tidak ditemukan. Pastikan OpenSSH terpasang.{ANSI_RESET}")
-            return
-        except Exception as e:
-            print(f"{warna_merah}Gagal menambahkan GitHub host key: {e}{ANSI_RESET}")
-            return
-    
-    # 8. Periksa koneksi SSH ke GitHub
-    print(f"{warna_kuning}Memeriksa koneksi SSH ke GitHub...{ANSI_RESET}")
-    try:
-        hasil_ssh_test = subprocess.run(
-            ["ssh", "-T", "git@github.com"],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        # SSH GitHub mengembalikan exit code 1 dengan pesan sukses
-        # Pesan sukses biasanya: "Hi username! You've successfully authenticated..."
-        # atau: "shell access denied" (yang berarti autentikasi berhasil)
-        stdout_output = hasil_ssh_test.stdout.lower()
-        stderr_output = hasil_ssh_test.stderr.lower()
-        
-        if "successfully authenticated" in stdout_output or "successfully authenticated" in stderr_output:
-            print(f"{warna_hijau}SSH GitHub terautentikasi. Lanjut ke push...{ANSI_RESET}")
-        elif "shell access denied" in stdout_output or "shell access denied" in stderr_output:
-            print(f"{warna_hijau}SSH GitHub terautentikasi. Lanjut ke push...{ANSI_RESET}")
-        elif "permission denied" in stderr_output:
-            print(f"{warna_merah}Penyebab: SSH Key tidak ditemukan atau belum terhubung ke akun GitHub.{ANSI_RESET}")
-            print(f"{warna_kuning}Solusi: Buat SSH Key dan tambahkan ke akun GitHub Anda.{ANSI_RESET}")
-            print(f"{warna_kuning}Lihat: https://docs.github.com/en/authentication/connecting-to-github-with-ssh{ANSI_RESET}")
-            return
-        else:
-            # Exit code 0 atau 1 dengan pesan lain - tetap lanjutkan
-            print(f"{warna_hijau}Koneksi SSH OK. Lanjut ke push...{ANSI_RESET}")
-    except subprocess.TimeoutExpired:
-        print(f"{warna_merah}Timeout: Pemeriksaan SSH terlalu lama.{ANSI_RESET}")
-        return
-    except FileNotFoundError:
-        print(f"{warna_merah}SSH tidak ditemukan. Pastikan OpenSSH terpasang.{ANSI_RESET}")
-        return
-    except Exception as e:
-        print(f"{warna_merah}Gagal memeriksa SSH: {e}{ANSI_RESET}")
-        return
-    
-    # 9. Periksa apakah ada commit lokal yang belum dipush
-    print()
-    print(f"{warna_kuning}Memeriksa commit yang belum dipush...{ANSI_RESET}")
-    try:
-        # Cek apakah branch lokal ada di remote
-        hasil_rev = subprocess.run(
-            ["git", "rev-list", "--count", "HEAD"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if hasil_rev.returncode != 0:
-            print(f"{warna_merah}Gagal mengecek commit lokal: {hasil_rev.stderr}{ANSI_RESET}")
-            return
-        
-        # Cek apakah ada commit di remote
-        hasil_remote_rev = subprocess.run(
-            ["git", "rev-list", "--count", "@{u}"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        commit_lokal = int(hasil_rev.stdout.strip()) if hasil_rev.stdout.strip() else 0
-        commit_remote = int(hasil_remote_rev.stdout.strip()) if hasil_remote_rev.returncode == 0 and hasil_remote_rev.stdout.strip() else 0
-        
-        if commit_lokal <= commit_remote:
-            print(f"{warna_hijau}Project sudah sinkron dengan GitHub. Tidak ada perubahan yang perlu dikirim.{ANSI_RESET}")
-            return
-    except Exception as e:
-        print(f"{warna_merah}Gagal mengecek status remote: {e}{ANSI_RESET}")
-        # Lanjutkan ke push saja jika gagal cek
-    
-    # 10. Jalankan git push
+    # 7. Jalankan git push langsung
     print()
     print(f"{warna_kuning}Menjalankan: git push{ANSI_RESET}")
     try:
@@ -1543,25 +1388,17 @@ def push_github() -> None:
             timeout=120
         )
         
+        # Tampilkan output stdout dan stderr
+        output_parts = []
+        if hasil_push.stdout:
+            output_parts.append(hasil_push.stdout)
+        if hasil_push.stderr:
+            output_parts.append(hasil_push.stderr)
+        
         if hasil_push.returncode != 0:
-            # Tampilkan penyebab sebenarnya
-            error_output = []
-            if hasil_push.stderr:
-                error_output.append(hasil_push.stderr)
-            if hasil_push.stdout:
-                error_output.append(hasil_push.stdout)
-            
-            error_msg = "\n".join(error_output) if error_output else "Tidak diketahui"
-            
             print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
-            
-            # Cek jenis error untuk memberikan solusi
-            error_lower = error_msg.lower()
-            if "authentication" in error_lower or "login" in error_lower or "credential" in error_lower or "permission denied" in error_lower:
-                print(f"{warna_merah}Penyebab: Kredensial GitHub tidak valid atau SSH key belum dikonfigurasi.{ANSI_RESET}")
-                print(f"{warna_kuning}Solusi: Setup SSH key atau gunakan Personal Access Token.{ANSI_RESET}")
-            else:
-                print(f"{warna_merah}Penyebab: {error_msg}{ANSI_RESET}")
+            if output_parts:
+                print("\n".join(output_parts))
             return
         
         print(f"{warna_hijau}Project berhasil dikirim ke GitHub.{ANSI_RESET}")
