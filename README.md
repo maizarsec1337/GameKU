@@ -105,7 +105,7 @@ GameKU
 Clone repository
 
 ```bash
-git clone https://github.com/USERNAME/GameKU.git
+git clone https://github.com/maizarsec1337/GameKU.git
 ```
 
 Masuk ke folder project
