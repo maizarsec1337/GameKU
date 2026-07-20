@@ -10,6 +10,7 @@ import subprocess
 import sys
 import os
 import json
+import pwd
 import socket
 import platform
 import shutil
@@ -22,6 +23,82 @@ from urllib.error import URLError, HTTPError
 # Konstanta
 INSTALLER_VERSI = "1.0.0"
 PROJECT_ROOT = Path(__file__).parent.resolve()
+
+
+def dapatkan_user_home() -> tuple:
+    """
+    Mendeteksi user dan home directory yang tepat.
+    Mengembalikan tuple (username, home_path)
+    Urutan deteksi: SUDO_USER, LOGNAME, USER, USERNAME (Windows), HOME fallback
+    """
+    # Cek SUDO_USER (jika dijalankan dengan sudo)
+    sudo_user = os.environ.get('SUDO_USER')
+    if sudo_user:
+        try:
+            # Dapatkan home directory menggunakan pwd
+            user_info = pwd.getpwnam(sudo_user)
+            return sudo_user, user_info.pw_dir
+        except KeyError:
+            # Jika user tidak ditemukan di sistem, coba LOGNAME
+            pass
+    
+    # Cek LOGNAME
+    logname = os.environ.get('LOGNAME')
+    if logname:
+        try:
+            user_info = pwd.getpwnam(logname)
+            return logname, user_info.pw_dir
+        except KeyError:
+            pass
+    
+    # Cek USER
+    user = os.environ.get('USER')
+    if user:
+        try:
+            user_info = pwd.getpwnam(user)
+            return user, user_info.pw_dir
+        except KeyError:
+            pass
+    
+    # Windows: Cek USERNAME
+    if SYSTEM_OS == "Windows":
+        username = os.environ.get('USERNAME')
+        if username:
+            home = os.path.expanduser("~")
+            return username, home
+        return "Unknown", os.environ.get('USERPROFILE', os.getcwd())
+    
+    # Fallback: gunakan os.path.expanduser("~")
+    home = os.path.expanduser("~")
+    # Coba dapatkan username dari home path
+    if home and os.path.isdir(home):
+        try:
+            # Cari user yang memiliki home directory ini
+            for user in os.listdir('/home'):
+                user_home = f'/home/{user}'
+                if os.path.isdir(user_home) and os.path.samefile(home, user_home):
+                    return user, home
+        except:
+            pass
+    
+    return "Unknown", home if home else "/root"
+
+def jalankan_git(args: list, timeout_val: int = 60) -> subprocess.CompletedProcess:
+    """
+    Menjalankan perintah git dengan HOME yang tepat untuk menemukan SSH keys.
+    Tidak menggunakan sudo.
+    """
+    user_aktif, user_home = dapatkan_user_home()
+    git_env = os.environ.copy()
+    git_env['HOME'] = user_home
+    return subprocess.run(
+        ['git'] + args,
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=timeout_val,
+        env=git_env
+    )
 
 # ANSI Color Codes
 ANSI_RESET = "\033[0m"
@@ -1195,13 +1272,7 @@ def push_github() -> None:
     if not (PROJECT_ROOT / ".git").exists():
         print(f"{warna_kuning}Folder .git tidak ditemukan. Menginisialisasi repository Git...{ANSI_RESET}")
         try:
-            hasil_init = subprocess.run(
-                ["git", "init"],
-                cwd=PROJECT_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
+            hasil_init = jalankan_git(["init"], timeout_val=60)
             if hasil_init.returncode != 0:
                 print(f"{warna_merah}Gagal menginisialisasi Git: {hasil_init.stderr}{ANSI_RESET}")
                 return
@@ -1219,13 +1290,7 @@ def push_github() -> None:
         # Jika origin belum ada, tambahkan remote origin
         print(f"{warna_kuning}Menambahkan remote origin...{ANSI_RESET}")
         try:
-            hasil_add = subprocess.run(
-                ["git", "remote", "add", "origin", remote_yang_diharapkan],
-                cwd=PROJECT_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
+            hasil_add = jalankan_git(["remote", "add", "origin", remote_yang_diharapkan], timeout_val=60)
             if hasil_add.returncode != 0:
                 print(f"{warna_merah}Gagal menambahkan remote origin: {hasil_add.stderr}{ANSI_RESET}")
                 return
@@ -1252,13 +1317,7 @@ def push_github() -> None:
                 pilihan = input("Pilihan Anda: ").strip().upper()
                 if pilihan == 'Y':
                     try:
-                        hasil_set = subprocess.run(
-                            ["git", "remote", "set-url", "origin", remote_yang_diharapkan],
-                            cwd=PROJECT_ROOT,
-                            capture_output=True,
-                            text=True,
-                            timeout=60
-                        )
+                        hasil_set = jalankan_git(["remote", "set-url", "origin", remote_yang_diharapkan], timeout_val=60)
                         if hasil_set.returncode != 0:
                             print(f"{warna_merah}Gagal mengganti remote origin: {hasil_set.stderr}{ANSI_RESET}")
                             return
@@ -1275,13 +1334,7 @@ def push_github() -> None:
     
     # 6. Periksa user.name Git
     try:
-        hasil_name = subprocess.run(
-            ["git", "config", "--global", "user.name"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        hasil_name = jalankan_git(["config", "--global", "user.name"], timeout_val=30)
         
         if hasil_name.returncode != 0 or not hasil_name.stdout.strip():
             print()
@@ -1293,13 +1346,7 @@ def push_github() -> None:
                 print(f"{warna_merah}Nama tidak boleh kosong. Push dibatalkan.{ANSI_RESET}")
                 return
             
-            hasil_set_name = subprocess.run(
-                ["git", "config", "--global", "user.name", nama],
-                cwd=PROJECT_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            hasil_set_name = jalankan_git(["config", "--global", "user.name", nama], timeout_val=30)
             if hasil_set_name.returncode != 0:
                 print(f"{warna_merah}Gagal mengatur user.name: {hasil_set_name.stderr}{ANSI_RESET}")
                 return
@@ -1310,13 +1357,7 @@ def push_github() -> None:
     
     # 7. Periksa user.email Git
     try:
-        hasil_email = subprocess.run(
-            ["git", "config", "--global", "user.email"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        hasil_email = jalankan_git(["config", "--global", "user.email"], timeout_val=30)
         
         if hasil_email.returncode != 0 or not hasil_email.stdout.strip():
             print()
@@ -1328,13 +1369,7 @@ def push_github() -> None:
                 print(f"{warna_merah}Email tidak boleh kosong. Push dibatalkan.{ANSI_RESET}")
                 return
             
-            hasil_set_email = subprocess.run(
-                ["git", "config", "--global", "user.email", email],
-                cwd=PROJECT_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            hasil_set_email = jalankan_git(["config", "--global", "user.email", email], timeout_val=30)
             if hasil_set_email.returncode != 0:
                 print(f"{warna_merah}Gagal mengatur user.email: {hasil_set_email.stderr}{ANSI_RESET}")
                 return
@@ -1347,13 +1382,7 @@ def push_github() -> None:
     print()
     print(f"{warna_kuning}Memeriksa status perubahan...{ANSI_RESET}")
     try:
-        hasil_status = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        hasil_status = jalankan_git(["status", "--porcelain"], timeout_val=30)
         
         if hasil_status.returncode != 0:
             print(f"{warna_merah}Gagal mengecek status Git: {hasil_status.stderr}{ANSI_RESET}")
@@ -1369,13 +1398,7 @@ def push_github() -> None:
             print()
             print(f"{warna_kuning}Menjalankan: git add .{ANSI_RESET}")
             try:
-                hasil_add = subprocess.run(
-                    ["git", "add", "."],
-                    cwd=PROJECT_ROOT,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
+                hasil_add = jalankan_git(["add", "."], timeout_val=60)
                 
                 if hasil_add.returncode != 0:
                     print(f"{warna_merah}Gagal menjalankan git add: {hasil_add.stderr}{ANSI_RESET}")
@@ -1396,13 +1419,7 @@ def push_github() -> None:
             print()
             print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
             try:
-                hasil_commit = subprocess.run(
-                    ["git", "commit", "-m", deskripsi],
-                    cwd=PROJECT_ROOT,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
+                hasil_commit = jalankan_git(["commit", "-m", deskripsi], timeout_val=60)
                 
                 if hasil_commit.returncode != 0:
                     # Tampilkan seluruh output stderr dan stdout
@@ -1427,13 +1444,14 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek status Git: {e}{ANSI_RESET}")
         return
     
-    # 10. Ambil branch aktif
-    branch_aktif = dapatkan_branch_aktif()
+    # 10. Deteksi user dan home directory yang tepat
+    user_aktif, user_home = dapatkan_user_home()
     
     # 11. Tampilkan informasi sebelum git push
     print()
-    print(f"{warna_kuning}Git executable    : git{ANSI_RESET}")
-    print(f"{warna_kuning}HOME              : {os.environ.get('HOME', os.environ.get('USERPROFILE', 'Tidak diset'))}{ANSI_RESET}")
+    print(f"{warna_kuning}User Aktif        : {user_aktif}{ANSI_RESET}")
+    print(f"{warna_kuning}Home User         : {user_home}{ANSI_RESET}")
+    print(f"{warna_kuning}HOME Environment  : {os.environ.get('HOME', os.environ.get('USERPROFILE', 'Tidak diset'))}{ANSI_RESET}")
     print(f"{warna_kuning}Working Directory : {PROJECT_ROOT}{ANSI_RESET}")
     print(f"{warna_kuning}Remote URL        : {remote_url if origin_ada else remote_yang_diharapkan}{ANSI_RESET}")
     print(f"{warna_kuning}Branch aktif      : {branch_aktif}{ANSI_RESET}")
@@ -1441,30 +1459,23 @@ def push_github() -> None:
     # 12. Jalankan git push
     print()
     print(f"{warna_kuning}Menjalankan: git push origin {branch_aktif}{ANSI_RESET}")
-    perintah_push = ["git", "push", "origin", branch_aktif]
+    perintah_push = ["push", "origin", branch_aktif]
     
     try:
-        hasil_push = subprocess.run(
-            perintah_push,
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=120,
-            env=os.environ.copy()
-        )
+        hasil_push = jalankan_git(perintah_push, timeout_val=120)
         
-        # 13. Tangkap stdout, stderr, dan exit code
+        # 14. Tangkap stdout, stderr, dan exit code
         stdout_output = hasil_push.stdout
         stderr_output = hasil_push.stderr
         exit_code = hasil_push.returncode
         
-        # 14. Tampilkan output
+        # 15. Tampilkan output
         if stdout_output:
             print(stdout_output)
         if stderr_output:
             print(stderr_output)
         
-        # 15. Jika stderr mengandung "Permission denied (publickey)", tampilkan seluruh output
+        # 16. Jika stderr mengandung "Permission denied (publickey)", tampilkan seluruh output
         if "Permission denied (publickey)" in stderr_output:
             print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
             print(stderr_output)
