@@ -1143,7 +1143,7 @@ def install_perbaiki_dependency() -> None:
 
 
 def push_github() -> None:
-    """Push project ke GitHub dengan validasi remote"""
+    """Push project ke GitHub dengan validasi lengkap"""
     warna_hijau = "\033[38;2;100;255;150m"
     warna_merah = "\033[38;2;255;100;100m"
     warna_kuning = "\033[38;2;255;255;100m"
@@ -1157,7 +1157,7 @@ def push_github() -> None:
         print(f"{warna_merah}Git tidak terpasang. Tidak dapat melakukan push ke GitHub.{ANSI_RESET}")
         return
     
-    # Cek apakah folder .git ada, jika belum jalankan git init
+    # 1. Pastikan direktori merupakan repository Git
     if not (PROJECT_ROOT / ".git").exists():
         print(f"{warna_kuning}Folder .git tidak ditemukan. Menginisialisasi repository Git...{ANSI_RESET}")
         try:
@@ -1176,10 +1176,9 @@ def push_github() -> None:
             print(f"{warna_merah}Gagal menginisialisasi Git: {e}{ANSI_RESET}")
             return
     
-    # Remote yang diharapkan
+    # 2. Konfigurasi remote origin
     remote_yang_diharapkan = "git@github.com:maizarsec1337/GameKU.git"
     
-    # Periksa apakah remote origin ada
     try:
         hasil_remote = subprocess.run(
             ["git", "remote", "get-url", "origin"],
@@ -1190,7 +1189,6 @@ def push_github() -> None:
         )
         
         if hasil_remote.returncode != 0:
-            # Remote origin tidak ada, tambahkan
             print(f"{warna_kuning}Menambahkan remote origin...{ANSI_RESET}")
             hasil_add_remote = subprocess.run(
                 ["git", "remote", "add", "origin", remote_yang_diharapkan],
@@ -1204,7 +1202,6 @@ def push_github() -> None:
                 return
             print(f"{warna_hijau}Remote origin berhasil ditambahkan.{ANSI_RESET}")
         else:
-            # Remote origin ada, periksa URL
             remote_url = hasil_remote.stdout.strip()
             if remote_url != remote_yang_diharapkan:
                 print(f"{warna_kuning}URL remote berbeda. Mengupdate ke URL yang benar...{ANSI_RESET}")
@@ -1225,17 +1222,80 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal memeriksa remote Git: {e}{ANSI_RESET}")
         return
     
-    # Minta deskripsi commit
-    print()
-    print("Masukkan deskripsi commit:")
-    deskripsi = input("> ").strip()
-    
-    if not deskripsi:
-        deskripsi = "Update project"
-    
+    # 3. Periksa user.name Git
     try:
-        # git add .
-        print(f"{warna_kuning}Menjalankan: git add .{ANSI_RESET}")
+        hasil_name = subprocess.run(
+            ["git", "config", "--global", "user.name"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if hasil_name.returncode != 0 or not hasil_name.stdout.strip():
+            print()
+            print("Konfigurasi Git user.name belum ada.")
+            print("Masukkan nama Anda:")
+            nama = input("> ").strip()
+            
+            if not nama:
+                print(f"{warna_merah}Nama tidak boleh kosong. Push dibatalkan.{ANSI_RESET}")
+                return
+            
+            hasil_set_name = subprocess.run(
+                ["git", "config", "--global", "user.name", nama],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if hasil_set_name.returncode != 0:
+                print(f"{warna_merah}Gagal mengatur user.name: {hasil_set_name.stderr}{ANSI_RESET}")
+                return
+            print(f"{warna_hijau}Git user.name berhasil diatur.{ANSI_RESET}")
+    except Exception as e:
+        print(f"{warna_merah}Gagal mengecek user.name Git: {e}{ANSI_RESET}")
+        return
+    
+    # 4. Periksa user.email Git
+    try:
+        hasil_email = subprocess.run(
+            ["git", "config", "--global", "user.email"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if hasil_email.returncode != 0 or not hasil_email.stdout.strip():
+            print()
+            print("Konfigurasi Git user.email belum ada.")
+            print("Masukkan email Anda:")
+            email = input("> ").strip()
+            
+            if not email:
+                print(f"{warna_merah}Email tidak boleh kosong. Push dibatalkan.{ANSI_RESET}")
+                return
+            
+            hasil_set_email = subprocess.run(
+                ["git", "config", "--global", "user.email", email],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if hasil_set_email.returncode != 0:
+                print(f"{warna_merah}Gagal mengatur user.email: {hasil_set_email.stderr}{ANSI_RESET}")
+                return
+            print(f"{warna_hijau}Git user.email berhasil diatur.{ANSI_RESET}")
+    except Exception as e:
+        print(f"{warna_merah}Gagal mengecek user.email Git: {e}{ANSI_RESET}")
+        return
+    
+    # 5. Jalankan git add .
+    print()
+    print(f"{warna_kuning}Menjalankan: git add .{ANSI_RESET}")
+    try:
         hasil_add = subprocess.run(
             ["git", "add", "."],
             cwd=PROJECT_ROOT,
@@ -1247,9 +1307,47 @@ def push_github() -> None:
         if hasil_add.returncode != 0:
             print(f"{warna_merah}Gagal menjalankan git add: {hasil_add.stderr}{ANSI_RESET}")
             return
+    except Exception as e:
+        print(f"{warna_merah}Gagal menjalankan git add: {e}{ANSI_RESET}")
+        return
+    
+    # 6. Periksa apakah ada perubahan menggunakan git status --porcelain
+    try:
+        hasil_status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
         
-        # git commit
-        print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
+        if hasil_status.returncode != 0:
+            print(f"{warna_merah}Gagal mengecek status Git: {hasil_status.stderr}{ANSI_RESET}")
+            return
+        
+        if not hasil_status.stdout.strip():
+            print(f"{warna_kuning}Tidak ada perubahan yang perlu dikirim ke GitHub.{ANSI_RESET}")
+            return
+        
+        # Hitung jumlah baris yang berubah
+        changed_lines = hasil_status.stdout.strip().split("\n") if hasil_status.stdout.strip() else []
+        print(f"{warna_hijau}Ditemukan {len(changed_lines)} file yang berubah.{ANSI_RESET}")
+    except Exception as e:
+        print(f"{warna_merah}Gagal mengecek status Git: {e}{ANSI_RESET}")
+        return
+    
+    # Minta deskripsi commit
+    print()
+    print("Masukkan deskripsi commit:")
+    deskripsi = input("> ").strip()
+    
+    if not deskripsi:
+        deskripsi = "Update project"
+    
+    # 8. Jalankan git commit
+    print()
+    print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
+    try:
         hasil_commit = subprocess.run(
             ["git", "commit", "-m", deskripsi],
             cwd=PROJECT_ROOT,
@@ -1259,16 +1357,27 @@ def push_github() -> None:
         )
         
         if hasil_commit.returncode != 0:
-            error_msg = hasil_commit.stderr.lower() if hasil_commit.stderr else ""
-            if "nothing to commit" in error_msg or "no changes" in error_msg:
-                print(f"{warna_kuning}Tidak ada perubahan yang perlu dikirim.{ANSI_RESET}")
-                return
-            else:
-                print(f"{warna_merah}Gagal menjalankan git commit: {hasil_commit.stderr}{ANSI_RESET}")
-                return
+            # Tampilkan seluruh output stderr dan stdout
+            error_output = []
+            if hasil_commit.stderr:
+                error_output.append(hasil_commit.stderr)
+            if hasil_commit.stdout:
+                error_output.append(hasil_commit.stdout)
+            
+            error_msg = "\n".join(error_output) if error_output else "Tidak diketahui"
+            print(f"{warna_merah}Gagal menjalankan git commit:{ANSI_RESET}")
+            print(error_msg)
+            return
         
-        # git push
-        print(f"{warna_kuning}Menjalankan: git push{ANSI_RESET}")
+        print(f"{warna_hijau}Commit berhasil dibuat.{ANSI_RESET}")
+    except Exception as e:
+        print(f"{warna_merah}Gagal menjalankan git commit: {e}{ANSI_RESET}")
+        return
+    
+    # 10. Jalankan git push
+    print()
+    print(f"{warna_kuning}Menjalankan: git push{ANSI_RESET}")
+    try:
         hasil_push = subprocess.run(
             ["git", "push"],
             cwd=PROJECT_ROOT,
@@ -1278,22 +1387,33 @@ def push_github() -> None:
         )
         
         if hasil_push.returncode != 0:
-            # Cek apakah masalahnya adalah belum login
-            error_msg = hasil_push.stderr.lower() if hasil_push.stderr else ""
-            if "authentication" in error_msg or "login" in error_msg or "credential" in error_msg or "could not read username" in error_msg:
-                print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
-                print(f"{warna_merah}Penyebab: Belum login ke GitHub atau kredensial tidak valid.{ANSI_RESET}")
-                print(f"{warna_kuning}Solusi: Lakukan 'git config --global user.name' dan 'git config --global user.email', lalu setup autentikasi (token atau SSH key).{ANSI_RESET}")
+            # Tampilkan penyebab sebenarnya
+            error_output = []
+            if hasil_push.stderr:
+                error_output.append(hasil_push.stderr)
+            if hasil_push.stdout:
+                error_output.append(hasil_push.stdout)
+            
+            error_msg = "\n".join(error_output) if error_output else "Tidak diketahui"
+            
+            print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
+            
+            # Cek jenis error untuk memberikan solusi
+            error_lower = error_msg.lower()
+            if "authentication" in error_lower or "login" in error_lower or "credential" in error_lower or "permission denied" in error_lower:
+                print(f"{warna_merah}Penyebab: Kredensial GitHub tidak valid atau SSH key belum dikonfigurasi.{ANSI_RESET}")
+                print(f"{warna_kuning}Solusi: Setup SSH key atau gunakan Personal Access Token.{ANSI_RESET}")
             else:
-                print(f"{warna_merah}Gagal menjalankan git push: {hasil_push.stderr}{ANSI_RESET}")
+                print(f"{warna_merah}Penyebab: {error_msg}{ANSI_RESET}")
             return
         
         print(f"{warna_hijau}Project berhasil dikirim ke GitHub.{ANSI_RESET}")
-        
     except subprocess.TimeoutExpired:
-        print(f"{warna_merah}Timeout: Proses git terlalu lama.{ANSI_RESET}")
+        print(f"{warna_merah}Timeout: Proses git push terlalu lama.{ANSI_RESET}")
+        return
     except Exception as e:
-        print(f"{warna_merah}Gagal push ke GitHub: {e}{ANSI_RESET}")
+        print(f"{warna_merah}Gagal menjalankan git push: {e}{ANSI_RESET}")
+        return
 
 
 def bersihkan_cache_lengkap() -> None:
