@@ -1429,31 +1429,19 @@ def push_github() -> None:
     
     # 10. Ambil branch aktif
     branch_aktif = dapatkan_branch_aktif()
-    print()
-    print(f"{warna_kuning}Branch aktif: {branch_aktif}{ANSI_RESET}")
     
-    # 11. Cek apakah upstream sudah ada
-    try:
-        hasil_upstream = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "@{upstream}"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        upstream_ada = hasil_upstream.returncode == 0 and hasil_upstream.stdout.strip()
-    except Exception:
-        upstream_ada = False
-    
-    # 12. Jalankan git push dengan atau tanpa -u flag
+    # 11. Tampilkan informasi sebelum git push
     print()
-    if upstream_ada:
-        print(f"{warna_kuning}Menjalankan: git push origin {branch_aktif}{ANSI_RESET}")
-        perintah_push = ["git", "push", "origin", branch_aktif]
-    else:
-        print(f"{warna_kuning}Menjalankan: git push -u origin {branch_aktif}{ANSI_RESET}")
-        perintah_push = ["git", "push", "-u", "origin", branch_aktif]
+    print(f"{warna_kuning}Git executable    : git{ANSI_RESET}")
+    print(f"{warna_kuning}HOME              : {os.environ.get('HOME', os.environ.get('USERPROFILE', 'Tidak diset'))}{ANSI_RESET}")
+    print(f"{warna_kuning}Working Directory : {PROJECT_ROOT}{ANSI_RESET}")
+    print(f"{warna_kuning}Remote URL        : {remote_url if origin_ada else remote_yang_diharapkan}{ANSI_RESET}")
+    print(f"{warna_kuning}Branch aktif      : {branch_aktif}{ANSI_RESET}")
+    
+    # 12. Jalankan git push
+    print()
+    print(f"{warna_kuning}Menjalankan: git push origin {branch_aktif}{ANSI_RESET}")
+    perintah_push = ["git", "push", "origin", branch_aktif]
     
     try:
         hasil_push = subprocess.run(
@@ -1461,25 +1449,32 @@ def push_github() -> None:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=120,
+            env=os.environ.copy()
         )
         
-        # 13. Tampilkan stdout, stderr, dan exit code
-        output_parts = []
-        if hasil_push.stdout:
-            output_parts.append(hasil_push.stdout)
-        if hasil_push.stderr:
-            output_parts.append(hasil_push.stderr)
+        # 13. Tangkap stdout, stderr, dan exit code
+        stdout_output = hasil_push.stdout
+        stderr_output = hasil_push.stderr
+        exit_code = hasil_push.returncode
         
-        if hasil_push.returncode != 0:
+        # 14. Tampilkan output
+        if stdout_output:
+            print(stdout_output)
+        if stderr_output:
+            print(stderr_output)
+        
+        # 15. Jika stderr mengandung "Permission denied (publickey)", tampilkan seluruh output
+        if "Permission denied (publickey)" in stderr_output:
             print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
-            if output_parts:
-                print("\n".join(output_parts))
+            print(stderr_output)
+            return
+        
+        if exit_code != 0:
+            print(f"{warna_merah}Gagal push ke GitHub.{ANSI_RESET}")
             return
         
         print(f"{warna_hijau}Project berhasil dikirim ke GitHub.{ANSI_RESET}")
-        if output_parts:
-            print("\n".join(output_parts))
     except subprocess.TimeoutExpired:
         print(f"{warna_merah}Timeout: Proses git push terlalu lama.{ANSI_RESET}")
         return
