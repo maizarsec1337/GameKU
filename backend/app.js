@@ -196,7 +196,14 @@ const apiRateLimiter = rateLimit({
 // ====================
 
 // Import routes with error handling - each route independently
-let bannerRoutes, categoryRoutes, gameRoutes, voucherRoutes, promoRoutes, searchRoutes, authRoutes, adminRoutes, resellerRoutes, uploadRoutes;
+let homeRoutes, bannerRoutes, categoryRoutes, gameRoutes, voucherRoutes, promoRoutes, searchRoutes, authRoutes, adminRoutes, resellerRoutes, uploadRoutes;
+
+try {
+  homeRoutes = require('./api/routes/home');
+} catch (error) {
+  console.error('❌ Home route import error:', error.message);
+  homeRoutes = express.Router();
+}
 
 try {
   bannerRoutes = require('./api/routes/banner');
@@ -269,6 +276,7 @@ try {
 }
 
 // Apply general API rate limiting
+app.use('/api/home', apiRateLimiter, homeRoutes);
 app.use('/api/banner', apiRateLimiter, bannerRoutes);
 app.use('/api/category', apiRateLimiter, categoryRoutes);
 app.use('/api/game', apiRateLimiter, gameRoutes);

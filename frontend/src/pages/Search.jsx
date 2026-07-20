@@ -1,26 +1,56 @@
-import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import assets from '../config/assetConfig';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import apiService from '../services/apiService';
 
 function Search() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchInput, setSearchInput] = useState(query);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const searchResults = [
-    { id: 1, name: 'Mobile Legends', image: assets.game.mlbb.file, price: 'Rp15.000', category: 'Top Up' },
-    { id: 2, name: 'Free Fire', image: assets.game.ff.file, price: 'Rp10.000', category: 'Top Up' },
-    { id: 3, name: 'PUBG Mobile', image: assets.game.pubg.file, price: 'Rp20.000', category: 'Top Up' },
-    { id: 4, name: 'Google Play', image: assets.voucher.googleplay.file, price: 'Rp20.000 - Rp500.000', category: 'Voucher' },
-  ];
+  // Fetch search results dynamically
+  useEffect(() => {
+    if (!query) {
+      setResults([]);
+      return;
+    }
+
+    const fetchResults = async () => {
+      setLoading(true);
+      try {
+        const data = await apiService.get(`/search?q=${encodeURIComponent(query)}`);
+        if (data?.success) {
+          setResults(data.data || []);
+        } else {
+          setResults([]);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [query]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      setSearchParams({ q: searchInput.trim() });
+    }
+  };
 
   return (
     <>
       <nav className="navbar" style={{ position: 'relative' }}>
         <div className="container">
           <Link to="/" className="navbar-logo">
-            <img src={assets.logo.icon.file} alt={assets.logo.icon.alt} width={28} height={28} style={{ objectFit: 'contain' }} />
+            <img src="/gambar/logo/Glogo.png" alt="Gameku Icon" width={28} height={28} style={{ objectFit: 'contain' }} />
             <span>Gameku</span>
           </Link>
           <div className="navbar-menu">
@@ -36,7 +66,7 @@ function Search() {
           <div className="section-header">
             <h1 className="section-title">Pencarian</h1>
             <div style={{ width: '100%', maxWidth: 500, marginTop: 'var(--space-lg)' }}>
-              <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', gap: 8 }}>
+              <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
                 <input
                   type="text"
                   placeholder="Cari produk..."
@@ -50,23 +80,33 @@ function Search() {
           </div>
           {query && (
             <>
-              <p style={{ textAlign: 'center', marginBottom: 'var(--space-lg)' }}>Hasil pencarian untuk: <strong>"{query}"</strong></p>
-              <div className="product-carousel" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
-                {searchResults.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    image={item.image}
-                    price={item.price}
-                    category={item.category}
-                  />
-                ))}
-              </div>
+              <p style={{ textAlign: 'center', marginBottom: 'var(--space-lg)' }}>
+                Hasil pencarian untuk: <strong>"{query}"</strong>
+              </p>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 'var(--space-lg)' }}>Mencari...</div>
+              ) : results.length > 0 ? (
+                <div className="product-carousel" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {results.map((item) => (
+                    <ProductCard
+                      key={item._id || item.id}
+                      id={item._id || item.id}
+                      name={item.name}
+                      image={item.image || item.image}
+                      price={item.price || 'Rp0'}
+                      category={item.category}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', color: 'var(--gray)' }}>Tidak ada hasil ditemukan.</p>
+              )}
             </>
           )}
           {!query && (
-            <p style={{ textAlign: 'center', fontSize: 'var(--font-sm)', color: 'var(--gray)', marginBottom: 'var(--space-lg)' }}>Masukkan kata kunci untuk mencari produk.</p>
+            <p style={{ textAlign: 'center', fontSize: 'var(--font-sm)', color: 'var(--gray)', marginBottom: 'var(--space-lg)' }}>
+              Masukkan kata kunci untuk mencari produk.
+            </p>
           )}
         </div>
       </div>

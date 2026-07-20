@@ -53,7 +53,7 @@ class DataCache {
 // Singleton instance
 export const dataCache = new DataCache();
 
-// Cache keys
+// Cache keys matching backend
 export const CACHE_KEYS = {
   BANNERS: 'banners',
   CATEGORIES: 'categories',
@@ -62,7 +62,16 @@ export const CACHE_KEYS = {
   MINECRAFT_PRODUCTS: 'minecraft_products',
   GIFT_CARD_PRODUCTS: 'giftcard_products',
   VOUCHERS: 'vouchers',
-  PROMOS: 'promos'
+  PROMOS: 'promos',
+  HOME_PRODUCTS: 'home_products',
+  HOME: 'home',
+  CATEGORY_PRODUCTS: 'category_products_',
+  PRODUCT_DETAIL: 'product_',
+  SELLER_PRODUCTS: 'seller_products_',
+  SELLER_STATS: 'seller_stats_',
+  POPULAR_SEARCHES: 'popular_searches',
+  TRENDING_SEARCHES: 'trending_searches',
+  SELLER_STORE: 'seller_store_'
 };
 
 export default DataCache;

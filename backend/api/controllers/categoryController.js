@@ -10,28 +10,10 @@ const sanitizeInput = (value) => {
   return value.trim().replace(/[<>]/g, '');
 };
 
-// Mock data for development when DB not available
-const getMockCategories = () => [
-  { _id: '1', name: 'Mobile Legends', slug: 'ml', icon: '📱', categoryType: 'topup', order: 1 },
-  { _id: '2', name: 'Free Fire', slug: 'ff', icon: '🔥', categoryType: 'topup', order: 2 },
-  { _id: '3', name: 'PUBG Mobile', slug: 'pubg', icon: '🎮', categoryType: 'topup', order: 3 },
-  { _id: '4', name: 'Valorant', slug: 'valorant', icon: '⚡', categoryType: 'topup', order: 4 },
-  { _id: '5', name: 'Steam Wallet', slug: 'steam', icon: '🎲', categoryType: 'steam', order: 5 },
-  { _id: '6', name: 'Minecraft', slug: 'minecraft', icon: '⛏️', categoryType: 'minecraft', order: 6 },
-  { _id: '7', name: 'Voucher', slug: 'voucher', icon: '🎫', categoryType: 'voucher', order: 7 },
-  { _id: '8', name: 'Gift Card', slug: 'giftcard', icon: '🎁', categoryType: 'giftcard', order: 8 }
-];
-
-const getMockProductsByCategory = (categoryType) => [
-  { _id: `${categoryType}-1`, name: `${categoryType} Produk 1`, price: 'Rp10.000', category: categoryType, image: '/gambar/game/default.jpg' },
-  { _id: `${categoryType}-2`, name: `${categoryType} Produk 2`, price: 'Rp20.000', category: categoryType, image: '/gambar/game/default.jpg' },
-  { _id: `${categoryType}-3`, name: `${categoryType} Produk 3`, price: 'Rp50.000', category: categoryType, image: '/gambar/game/default.jpg' }
-];
-
 const getCategories = async (req, res) => {
   try {
     // Check cache first
-    const cached = cache.get(CACHE_KEYS.CATEGORIES || 'categories');
+    const cached = cache.get(CACHE_KEYS.CATEGORIES);
     if (cached) {
       return res.json({
         success: true,
@@ -52,26 +34,13 @@ const getCategories = async (req, res) => {
         .catch(() => []);
     }
     
-    // If no data from DB, use mock data
-    if (categories.length === 0 && process.env.NODE_ENV !== 'production') {
-      categories = getMockCategories();
-    }
-    
-    // Cache for 5 minutes
-    if (categories.length > 0) {
-      cache.set(CACHE_KEYS.CATEGORIES || 'categories', categories, 300);
-    }
-    
+    // Return empty array if no categories - no mock data
     res.json({
       success: true,
       data: categories
     });
   } catch (error) {
     console.error('getCategories error:', error.message);
-    // Return mock data on error for development
-    if (process.env.NODE_ENV !== 'production') {
-      return res.json({ success: true, data: getMockCategories() });
-    }
     res.status(500).json({ success: false, message: 'Gagal memuat kategori' });
   }
 };
@@ -119,15 +88,8 @@ const getCategoryById = async (req, res) => {
           .catch(() => []);
         }
       } catch (dbError) {
-        // DB query failed, will use mock data
+        console.error('DB query error:', dbError.message);
       }
-    }
-    
-    // If no data from DB, use mock data for development
-    if ((!category || products.length === 0) && process.env.NODE_ENV !== 'production') {
-      category = getMockCategories().find(c => c.slug === req.params.id) || 
-                 { _id: req.params.id, name: req.params.id, slug: req.params.id, categoryType: 'topup' };
-      products = getMockProductsByCategory(req.params.id);
     }
     
     if (!category) {
@@ -140,12 +102,6 @@ const getCategoryById = async (req, res) => {
     return res.json({ success: true, products, category });
   } catch (error) {
     console.error('getCategoryById error:', error.message);
-    // Return mock data on error for development
-    if (process.env.NODE_ENV !== 'production') {
-      const category = getMockCategories().find(c => c.slug === req.params.id) || 
-                       { _id: req.params.id, name: req.params.id, slug: req.params.id };
-      return res.json({ success: true, products: getMockProductsByCategory(req.params.id), category });
-    }
     res.status(500).json({ success: false, message: 'Gagal memuat kategori' });
   }
 };
@@ -162,7 +118,7 @@ const createCategory = async (req, res) => {
       });
     }
     
-    let imagePath = '/gambar/category/default.png';
+    let imagePath = '/storage/category/default.png';
     
     if (req.file) {
       try {
@@ -188,7 +144,8 @@ const createCategory = async (req, res) => {
       const saved = await category.save();
       
       // Invalidate cache
-      cache.del(CACHE_KEYS.CATEGORIES || 'categories');
+      cache.del(CACHE_KEYS.CATEGORIES);
+      cache.del(CACHE_KEYS.HOME);
       
       return res.status(201).json({
         success: true,
@@ -197,10 +154,9 @@ const createCategory = async (req, res) => {
       });
     }
     
-    res.status(201).json({
-      success: true,
-      message: 'Kategori berhasil ditambahkan (mock)',
-      data: { name, slug, icon, image: imagePath }
+    res.status(400).json({
+      success: false,
+      message: 'Database tidak tersedia'
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -252,7 +208,8 @@ const updateCategory = async (req, res) => {
     await category.save();
     
     // Invalidate cache
-    cache.del(CACHE_KEYS.CATEGORIES || 'categories');
+    cache.del(CACHE_KEYS.CATEGORIES);
+    cache.del(CACHE_KEYS.HOME);
     cache.del(`category_${id}`);
     
     res.json({
@@ -291,7 +248,8 @@ const deleteCategory = async (req, res) => {
     await category.save();
     
     // Invalidate cache
-    cache.del(CACHE_KEYS.CATEGORIES || 'categories');
+    cache.del(CACHE_KEYS.CATEGORIES);
+    cache.del(CACHE_KEYS.HOME);
     cache.del(`category_${id}`);
     
     res.json({

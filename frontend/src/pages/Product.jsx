@@ -1,16 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import assets from '../config/assetConfig';
-import {
-  getProduct,
-  getRelated,
-  getYouMayLike,
-  getReviews,
-  getFaqs,
-  getSeller,
-  fmt
-} from '../config/productData';
-import ImageWithFallback from '../components/ImageWithFallback';
+import ProductCard from '../components/ProductCard';
+import apiService from '../services/apiService';
 import '../css/product.css';
 
 /* Ikon inline (identitas Gameku, bukan copy Itemku) */
@@ -116,7 +107,7 @@ const IconEmoji = () => (
 const QUICK_EMOJIS = ['😊', '👍', '🎮', '🔥', '💰', '🙏', '😍', '⚡'];
 
 function Stars({ value }) {
-  const full = Math.round(value);
+  const full = Math.round(value || 0);
   return (
     <span className="pd-stars">
       {Array.from({ length: 5 }).map((_, i) =>
@@ -168,8 +159,7 @@ function Accordion({ title, children, defaultOpen = false }) {
 }
 
 /* ==================== CHAT PANEL ==================== */
-function ChatPanel({ open, onClose, peer, variant }) {
-  const isSeller = variant === 'seller';
+function ChatPanel({ open, onClose, seller }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -177,17 +167,14 @@ function ChatPanel({ open, onClose, peer, variant }) {
   const bodyRef = useRef(null);
 
   useEffect(() => {
-    if (open) {
-      const greeting = isSeller
-        ? `Halo! Saya ${peer?.name || 'Seller'}. Ada yang bisa saya bantu terkait produk ini?`
-        : 'Halo! Saya Customer Support Gameku. Ada yang bisa saya bantu?';
+    if (open && seller) {
       setMessages([
-        { id: 1, side: 'left', type: 'text', content: greeting, time: '09:00' }
+        { id: 1, side: 'left', type: 'text', content: `Halo! Saya ${seller?.name || 'Seller'}. Ada yang bisa saya bantu terkait produk ini?`, time: '09:00' }
       ]);
       setText('');
       setShowEmoji(false);
     }
-  }, [open, isSeller, peer]);
+  }, [open, seller]);
 
   useEffect(() => {
     if (bodyRef.current) {
@@ -233,12 +220,12 @@ function ChatPanel({ open, onClose, peer, variant }) {
       <aside className="pd-chat-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Chat">
         <header className="pd-chat-header">
           <div className="pd-chat-avatar">
-            <ImageWithFallback src={isSeller ? peer?.avatar : assets.logo.icon.file} alt={peer?.name} />
+            <img src={seller?.avatar || '/gambar/avatar/default.png'} alt={seller?.name} />
           </div>
           <div className="pd-chat-head-info">
-            <div className="pd-chat-name">{isSeller ? peer?.name : 'Customer Support'}</div>
-            <StatusBadge status={isSeller ? peer?.status : 'online'} />
-            <div className="pd-chat-last">Terakhir aktif: {isSeller ? (peer?.lastActive || '-') : 'Sekarang'}</div>
+            <div className="pd-chat-name">{seller?.name || 'Seller'}</div>
+            <StatusBadge status={seller?.status || 'offline'} />
+            <div className="pd-chat-last">Terakhir aktif: {seller?.lastActive || '-'}</div>
           </div>
           <button type="button" className="pd-chat-close" onClick={onClose} aria-label="Tutup">
             <IconClose />
@@ -294,23 +281,138 @@ function ChatPanel({ open, onClose, peer, variant }) {
   );
 }
 
+// Format price helper
+const fmt = (n) => 'Rp' + Math.round(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+
 function Product() {
   const { id } = useParams();
-  const productId = parseInt(id, 10);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [related, setRelated] = useState([]);
+  const [youMayLike, setYouMayLike] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [faqs, setFaqs] = useState([]);
 
-  const product = useMemo(() => getProduct(productId), [productId]);
-  const related = useMemo(() => getRelated(product), [product]);
-  const youMayLike = useMemo(() => getYouMayLike(product), [product]);
-  const reviews = useMemo(() => getReviews(), []);
-  const faqs = useMemo(() => getFaqs(), []);
-  const seller = useMemo(() => getSeller(product), [product]);
-
-  // State lokal
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [selectedNominal, setSelectedNominal] = useState(0);
   const [wishlisted, setWishlisted] = useState(false);
   const [chat, setChat] = useState(null); // 'seller' | 'cs' | null
+
+   // Fetch product from API
+   useEffect(() => {
+     const fetchProduct = async () => {
+       setLoading(true);
+       try {
+         const data = await apiService.get(`/home/product/${id}`);
+         if (data?.success && data.data) {
+           setProduct(data.data);
+           // Fetch related products from same category
+           const relatedData = await apiService.get(`/home/category/${data.data.category}`);
+           if (relatedData?.success) {
+             setRelated((relatedData.data || []).filter(p => p._id !== id && p._id !== data.data._id).slice(0, 8));
+           }
+         } else {
+           setProduct(null);
+         }
+       } catch (error) {
+         console.error('Product fetch error:', error);
+         setProduct(null);
+       } finally {
+         setLoading(false);
+       }
+     };
+
+     if (id) {
+       fetchProduct();
+     }
+   }, [id]);
+
+  // Fetch reviews and FAQs
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const data = await apiService.get(`/product/${id}/reviews`);
+        if (data?.success) {
+          setReviews(data.data || []);
+        }
+      } catch (error) {
+        // Use default if not available
+      }
+    };
+
+    const fetchFaqs = async () => {
+      try {
+        const data = await apiService.get('/page/faqs');
+        if (data?.success) {
+          setFaqs(data.data || []);
+        }
+      } catch (error) {
+        // Use default if not available
+      }
+    };
+
+    fetchReviews();
+    fetchFaqs();
+  }, [id]);
+
+  // Default FAQs if none from API
+  const defaultFaqs = [
+    { q: 'Apakah pembelian di Gameku aman?', a: 'Ya. Gameku adalah platform resmi dan terverifikasi. Seluruh transaksi dienkripsi.' },
+    { q: 'Berapa lama proses pengiriman produk?', a: '1 - 5 menit setelah pembayaran berhasil.' },
+    { q: 'Bagaimana jika produk tidak masuk?', a: 'Hubungi customer service 24/7 kami.' }
+  ];
+
+  // Determine seller info for third-party sellers
+  const seller = useMemo(() => {
+    if (!product) return null;
+    if (product.isOfficial) return null;
+    
+    return {
+      name: product.storeName || product.sellerName || 'Seller',
+      status: 'online',
+      lastActive: 'Sekarang',
+      rating: (product.averageRating || 4.5).toFixed(1),
+      transactions: '100+',
+      response: '±5 mnt',
+      avatar: '/gambar/avatar/default.png'
+    };
+  }, [product]);
+
+  // Determine if seller is third-party
+  const isThirdPartySeller = !product?.isOfficial;
+
+  // Get images array
+  const images = useMemo(() => {
+    if (!product?.images || product.images.length === 0) {
+      return [product?.image || '/gambar/logo/Glogo.png'];
+    }
+    return product.images.map(img => typeof img === 'string' ? img : img.path);
+  }, [product]);
+
+  // Get nominals array (for top-up style products)
+  const nominals = useMemo(() => {
+    if (!product?.nominals || product.nominals.length === 0) {
+      // Create default nominals based on price
+      return [{ label: 'Paket Standar', price: product?.priceRp || product?.price || 0 }];
+    }
+    return product.nominals.map(n => ({
+      label: n.label || n.name,
+      price: n.price
+    }));
+  }, [product]);
+
+  if (loading) {
+    return (
+      <div className="product-detail">
+        <div className="container">
+          <div style={{ textAlign: 'center', padding: 'var(--space-xl)' }}>
+            Memuat produk...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -326,9 +428,9 @@ function Product() {
     );
   }
 
-  const images = product.images && product.images.length ? product.images : [product.image];
-  const nominal = product.nominals[selectedNominal] || product.nominals[0];
-  const unitPrice = nominal ? nominal.price : product.basePrice;
+  const mainImage = images[activeImg] || images[0];
+  const selectedNominalData = nominals[selectedNominal] || nominals[0];
+  const unitPrice = selectedNominalData?.price || 0;
   const total = unitPrice * qty;
 
   const toggleWishlist = () => setWishlisted((w) => !w);
@@ -348,8 +450,6 @@ function Product() {
     setSelectedNominal(0);
   };
 
-  const chatPeer = chat === 'seller' ? seller : { name: 'Customer Support Gameku' };
-
   return (
     <div className="product-detail">
       <div className="container">
@@ -357,7 +457,7 @@ function Product() {
         <nav className="pd-breadcrumb">
           <Link to="/">Beranda</Link>
           <span className="sep">/</span>
-          <Link to={`/category/${product.category.toLowerCase()}`}>{product.category}</Link>
+          <Link to={`/category/${product.category?.toLowerCase() || 'topup'}`}>{product.category || 'Produk'}</Link>
           <span className="sep">/</span>
           <span className="current">{product.name}</span>
         </nav>
@@ -368,10 +468,10 @@ function Product() {
             {/* Gallery */}
             <div className="pd-gallery">
               <div className="pd-main-image">
-                <ImageWithFallback
-                  key={activeImg}
-                  src={images[activeImg]}
-                  alt={product.name}
+                <img 
+                  key={activeImg} 
+                  src={mainImage} 
+                  alt={product.name} 
                   className="pd-fade-img"
                 />
               </div>
@@ -385,7 +485,7 @@ function Product() {
                       onClick={() => setActiveImg(idx)}
                       aria-label={`Gambar ${idx + 1}`}
                     >
-                      <ImageWithFallback src={img} alt={`${product.name} ${idx + 1}`} />
+                      <img src={img} alt={`${product.name} ${idx + 1}`} />
                     </button>
                   ))}
                 </div>
@@ -398,9 +498,9 @@ function Product() {
 
               <div className="pd-meta-row">
                 <span className="pd-rating">
-                  <Stars value={product.rating} />
-                  <span className="pd-rating-value">{product.rating}</span>
-                  <span className="pd-review-count">({product.reviewCount} ulasan)</span>
+                  <Stars value={product.averageRating || 4.5} />
+                  <span className="pd-rating-value">{product.averageRating || 4.5}</span>
+                  <span className="pd-review-count">({product.reviewCount || 0} ulasan)</span>
                 </span>
                 {seller && (
                   <span className="pd-meta-seller">Dijual oleh <strong>{seller.name}</strong></span>
@@ -414,7 +514,7 @@ function Product() {
                 <span className="pd-badge pd-badge-verified">
                   <IconShield /> Gameku Verified
                 </span>
-                {seller && (
+                {isThirdPartySeller && (
                   <span className="pd-badge pd-badge-seller">
                     <IconChat /> Seller Pihak Ketiga
                   </span>
@@ -424,41 +524,43 @@ function Product() {
               <div className="pd-spec">
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Kategori</span>
-                  <span className="pd-spec-value">{product.category}</span>
+                  <span className="pd-spec-value">{product.category || 'Produk'}</span>
                 </div>
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Platform</span>
-                  <span className="pd-spec-value">{product.platform}</span>
+                  <span className="pd-spec-value">{product.brand || product.platform || 'Multi Platform'}</span>
                 </div>
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Region</span>
-                  <span className="pd-spec-value">{product.region}</span>
+                  <span className="pd-spec-value">Global</span>
                 </div>
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Status Stok</span>
-                  <span className="pd-spec-value in-stock">{product.stock}</span>
+                  <span className={`pd-spec-value ${product.stock > 0 ? 'in-stock' : 'out-stock'}`}>
+                    {product.stock > 0 ? `${product.stock} Tersedia` : 'Stok Habis'}
+                  </span>
                 </div>
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Estimasi Proses</span>
-                  <span className="pd-spec-value">{product.processTime}</span>
+                  <span className="pd-spec-value">1 - 5 menit</span>
                 </div>
                 <div className="pd-spec-item">
                   <span className="pd-spec-label">Rating</span>
-                  <span className="pd-spec-value">{product.rating} / 5</span>
+                  <span className="pd-spec-value">{(product.averageRating || 4.5).toFixed(1)} / 5</span>
                 </div>
               </div>
 
-              <p className="pd-short-info">{product.shortInfo}</p>
+              <p className="pd-short-info">{product.description || product.shortInfo || 'Tidak ada deskripsi.'}</p>
             </div>
 
             {/* Deskripsi Produk - Accordion */}
             <h2 className="pd-section-title">Deskripsi Produk</h2>
             <Accordion title="Penjelasan Produk" defaultOpen>
-              <p>{product.description}</p>
+              <p>{product.description || 'Tidak ada deskripsi tambahan.'}</p>
             </Accordion>
             <Accordion title="Cara Pembelian">
               <ul>
-                <li>Pilih nominal / paket yang kamu inginkan di panel pembelian.</li>
+                <li>Pilih nominal / paket yang kamu inginkan.</li>
                 <li>Tentukan jumlah (quantity) sesuai kebutuhan.</li>
                 <li>Klik <strong>Beli Sekarang</strong> atau <strong>Tambah ke Keranjang</strong>.</li>
                 <li>Lakukan pembayaran melalui metode yang tersedia.</li>
@@ -467,10 +569,10 @@ function Product() {
             </Accordion>
             <Accordion title="Cara Redeem">
               <ul>
-                <li>Setelah pembayaran berhasil, kode redeem akan dikirim ke halaman transaksi kamu.</li>
-                <li>Buka aplikasi / platform terkait dan masuk ke menu <em>Redeem</em> atau <em>Top Up</em>.</li>
-                <li>Masukkan kode atau ikuti instruksi yang ditampilkan.</li>
-                <li>Saldo / item akan langsung masuk ke akun kamu.</li>
+                <li>Setelah pembayaran berhasil, kode redeem akan dikirim.</li>
+                <li>Buka aplikasi / platform terkait dan masuk ke menu <em>Redeem</em>.</li>
+                <li>Masukkan kode atau ikuti instruksi.</li>
+                <li>Status akan langsung aktif.</li>
               </ul>
             </Accordion>
             <Accordion title="Ketentuan">
@@ -478,92 +580,54 @@ function Product() {
                 <li>Produk hanya berlaku untuk region yang tertera.</li>
                 <li>Pastikan data akun tujuan sudah benar sebelum checkout.</li>
                 <li>Transaksi bersifat final setelah item berhasil dikirimkan.</li>
-                <li>Gameku tidak bertanggung jawab atas kesalahan input akun dari pembeli.</li>
+                <li>Gameku tidak bertanggung jawab atas kesalahan input akun.</li>
               </ul>
-            </Accordion>
-            <Accordion title="Informasi Tambahan">
-              <p>
-                Gameku merupakan platform digital gaming store resmi dan terverifikasi di Indonesia.
-                Seluruh produk diproses dengan sistem otomatis dan didukung layanan customer service 24/7.
-                Untuk bantuan lebih lanjut, silakan hubungi tim support kami melalui halaman kontak.
-              </p>
             </Accordion>
 
               {/* Review Pembeli */}
-      <h2 className="pd-section-title">Review Pembeli</h2>
-      <div className="pd-review-summary">
-        <div className="pd-review-big">
-          <div className="pd-review-score">{product.rating}</div>
-          <div className="pd-review-count-big">dari 5.0</div>
-        </div>
-        <div className="pd-rating-bar">
-          {[5, 4, 3, 2, 1].map((star) => {
-            const percent = (star === 5 ? 70 : star === 4 ? 20 : star === 3 ? 5 : star === 2 ? 3 : 2);
-            return (
-              <div className="pd-rating-bar-item" key={star}>
-                <span className="pd-rating-bar-label">{star}</span>
-                <div className="pd-rating-bar-track">
-                  <div className="pd-rating-bar-fill" style={{ width: `${percent}%` }} />
-                </div>
-                <span className="pd-rating-bar-percent">{percent}%</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="pd-review-list">
-        {reviews.map((r, i) => (
-          <div className="pd-review-item" key={i}>
-            <div className="pd-review-head">
-              <div className="pd-review-avatar">
-                <ImageWithFallback src={r.avatar} alt={r.name} />
-              </div>
-              <div>
-                <div className="pd-review-user">{r.name}</div>
-                <div className="pd-review-date">{r.date} • <Stars value={r.rating} /></div>
-              </div>
-            </div>
-            <p className="pd-review-comment">{r.comment}</p>
-            {i === 0 && (
-              <div className="pd-review-seller-reply">
-                <div className="pd-review-seller-reply-head">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4v7" />
-                    <path d="M20 20v-7" />
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                  </svg>
-                  Penjual
-                </div>
-                <p className="pd-review-seller-reply-text">
-                  Terima kasih atas ulasan Anda! Kami senang bisa membantu. Jika ada pertanyaan lain, silakan chat kami kapan saja.
-                </p>
-              </div>
-            )}
-            <div className="pd-review-actions">
-              <button type="button" className="pd-review-like-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 1H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-6z" />
-                  <path d="M14 1l-2 4-2-4" />
-                </svg>
-                <span>12</span>
-              </button>
-              <button type="button" className="pd-review-like-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 15V3" />
-                  <path d="M14 9l-4-4-4 4" />
-                </svg>
-                <span>2</span>
-              </button>
-            </div>
+        <h2 className="pd-section-title">Review Pembeli</h2>
+        <div className="pd-review-summary">
+          <div className="pd-review-big">
+            <div className="pd-review-score">{(product.averageRating || 4.5).toFixed(1)}</div>
+            <div className="pd-review-count-big">dari 5.0</div>
           </div>
-        ))}
-      </div>
+          <div className="pd-rating-bar">
+            {[5, 4, 3, 2, 1].map((star) => {
+              const percent = star === 5 ? 70 : star === 4 ? 20 : star === 3 ? 5 : star === 2 ? 3 : 2;
+              return (
+                <div className="pd-rating-bar-item" key={star}>
+                  <span className="pd-rating-bar-label">{star}</span>
+                  <div className="pd-rating-bar-track">
+                    <div className="pd-rating-bar-fill" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className="pd-rating-bar-percent">{percent}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="pd-review-list">
+          {(reviews.length > 0 ? reviews : [{ name: 'Pembeli', rating: 5, comment: 'Produk berkualitas tinggi, layanan cepat.' }]).map((r, i) => (
+            <div className="pd-review-item" key={i}>
+              <div className="pd-review-head">
+                <div className="pd-review-avatar">
+                  <img src={r.avatar || '/gambar/avatar/default.png'} alt={r.name} />
+                </div>
+                <div>
+                  <div className="pd-review-user">{r.name}</div>
+                  <div className="pd-review-date">{r.date || 'Baru saja'} • <Stars value={r.rating || 5} /></div>
+                </div>
+              </div>
+              <p className="pd-review-comment">{r.comment}</p>
+            </div>
+          ))}
+        </div>
 
             {/* FAQ */}
             <h2 className="pd-section-title">Pertanyaan Umum (FAQ)</h2>
-            {faqs.map((f, i) => (
-              <Accordion key={i} title={f.q}>
-                <p>{f.a}</p>
+            {(faqs.length > 0 ? faqs : defaultFaqs).map((f, i) => (
+              <Accordion key={i} title={f.q || f.question}>
+                <p>{f.a || f.answer}</p>
               </Accordion>
             ))}
 
@@ -573,43 +637,18 @@ function Product() {
                 <h2 className="pd-section-title">Produk Serupa</h2>
                 <div className="pd-horizontal-scroll">
                   {related.map((p) => (
-              <Link
-                       key={p.id}
-                       to={`/product/${p.id}`}
-                       className="pd-horizontal-card"
-                       onClick={() => goToProduct(p.id)}
-                     >
-                       <div className="pd-horizontal-img">
-                         <ImageWithFallback src={p.image} alt={p.name} />
-                       </div>
-                       <div className="pd-horizontal-body">
-                         <div className="pd-horizontal-name">{p.name}</div>
-                         <div className="pd-horizontal-price">{p.price}</div>
-                       </div>
-                     </Link>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Yang Mungkin Kamu Suka */}
-            {youMayLike.length > 0 && (
-              <>
-                <h2 className="pd-section-title">Produk Yang Mungkin Kamu Suka</h2>
-                <div className="pd-horizontal-scroll">
-                  {youMayLike.map((p) => (
                     <Link
-                      key={p.id}
-                      to={`/product/${p.id}`}
+                      key={p._id || p.id}
+                      to={`/product/${p._id || p.id}`}
                       className="pd-horizontal-card"
-                      onClick={() => goToProduct(p.id)}
+                      onClick={() => goToProduct(p._id || p.id)}
                     >
                       <div className="pd-horizontal-img">
-                        <ImageWithFallback src={p.image} alt={p.name} />
+                        <img src={p.image} alt={p.name} />
                       </div>
                       <div className="pd-horizontal-body">
                         <div className="pd-horizontal-name">{p.name}</div>
-                        <div className="pd-horizontal-price">{p.price}</div>
+                        <div className="pd-horizontal-price">{p.price || fmt(p.priceRp)}</div>
                       </div>
                     </Link>
                   ))}
@@ -626,19 +665,13 @@ function Product() {
 
               <div className="pd-price-block">
                 <span className="pd-price">{fmt(unitPrice)}</span>
-                {product.nominals.length > 1 && (
-                  <span className="pd-price-strike">{product.price}</span>
-                )}
-                {product.nominals.length > 1 && (
-                  <span className="pd-discount-badge">HEMAT BANYAK</span>
-                )}
               </div>
 
-              {product.nominals.length > 1 && (
+              {nominals.length > 1 && (
                 <>
                   <label className="pd-field-label">Pilih Nominal</label>
                   <div className="pd-nominal-grid">
-                    {product.nominals.map((n, idx) => (
+                    {nominals.map((n, idx) => (
                       <button
                         type="button"
                         key={idx}
@@ -704,16 +737,16 @@ function Product() {
             </div>
 
             {/* Chat Penjual (hanya seller pihak ketiga) */}
-            {seller && (
+            {isThirdPartySeller && seller && (
               <div className="pd-chat-card">
                 <div className="pd-chat-card-head">
                   <div className="pd-chat-card-avatar">
-                    <ImageWithFallback src={seller.avatar} alt={seller.name} />
+                    <img src={seller.avatar} alt={seller.name} />
                   </div>
                   <div className="pd-chat-card-id">
                     <div className="pd-chat-card-top">
                       <div className="pd-chat-card-logo">
-                        <ImageWithFallback src={assets.logo.icon.file} alt="Gameku" />
+                        <img src="/gambar/logo/Glogo.png" alt="Gameku" />
                       </div>
                       <span className="pd-chat-card-name">{seller.name}</span>
                     </div>
@@ -745,7 +778,7 @@ function Product() {
             <div className="pd-cs-card">
               <div className="pd-cs-card-head">
                 <div className="pd-cs-card-logo">
-                  <ImageWithFallback src={assets.logo.icon.file} alt="Gameku" />
+                  <img src="/gambar/logo/Glogo.png" alt="Gameku" />
                 </div>
                 <div className="pd-cs-card-id">
                   <div className="pd-cs-card-name">Customer Support</div>
@@ -766,7 +799,7 @@ function Product() {
 
       {/* Floating button (mobile) */}
       <div className="pd-floating">
-        {seller && (
+        {isThirdPartySeller && seller && (
           <button type="button" className="pd-fab pd-fab-seller" onClick={() => setChat('seller')} aria-label="Chat Penjual">
             <IconChat />
           </button>
@@ -777,8 +810,8 @@ function Product() {
       </div>
 
       {/* Panel Chat */}
-      <ChatPanel open={chat === 'seller'} onClose={() => setChat(null)} peer={seller} variant="seller" />
-      <ChatPanel open={chat === 'cs'} onClose={() => setChat(null)} peer={chatPeer} variant="cs" />
+      <ChatPanel open={chat === 'seller'} onClose={() => setChat(null)} seller={seller} />
+      <ChatPanel open={chat === 'cs'} onClose={() => setChat(null)} seller={{ name: 'Customer Support', status: 'online' }} />
     </div>
   );
 }

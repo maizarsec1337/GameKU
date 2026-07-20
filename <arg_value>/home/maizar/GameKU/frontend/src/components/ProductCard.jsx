@@ -1,39 +1,58 @@
 import React from 'react';
 import BadgePlatform from './BadgePlatform';
 
-const ProductCard = React.memo(function ProductCard({ id, name, image, price, category, platform, originalPrice, discount, rating, sold, stock, isOfficial }) {
-  // Determine if product is out of stock
-  const isOutOfStock = stock === 0 || stock === null;
+const ProductCard = React.memo(function ProductCard({ 
+  id, 
+  name, 
+  image, 
+  price, 
+  category, 
+  platform, 
+  originalPrice, 
+  discount, 
+  rating, 
+  sold, 
+  stock,
+  status,
+  sellerName,
+  storeName,
+  isOfficial 
+}) {
+  const isOutOfStock = status === 'sold_out' || stock === 0;
   
   return (
     <a 
       href={`/product/${id}`} 
       className="product-card" 
       data-category={category}
+      data-status={status}
     >
       <div className="product-image-wrapper">
         <LazyImage src={image} alt={name} type="product" />
+        {isOutOfStock && (
+          <div className="product-badge-sold-out">STOK HABIS</div>
+        )}
         {discount && (
           <div className="product-badge">{discount}% OFF</div>
         )}
-        {isOutOfStock && (
-          <div className="product-badge product-badge-sold-out">STOK HABIS</div>
-        )}
         <BadgePlatform platform={platform} />
         {isOfficial && (
-          <div className="product-badge product-badge-official">Official</div>
+          <div className="product-badge-official">Official</div>
+        )}
+        {!isOfficial && sellerName && (
+          <div className="product-badge-seller">Seller</div>
         )}
       </div>
       <div className="product-info">
         <h3 className="product-name">{name}</h3>
         <div className="product-meta">
           {category && <span className="product-category">{category}</span>}
-          {sold && <span className="product-sold">{sold} terjual</span>}
+          {sold !== undefined && sold !== null && <span className="product-sold">{sold} terjual</span>}
         </div>
-        {rating && (
+        {rating && rating > 0 && (
           <div className="product-rating">
             <span className="product-stars">{'★'.repeat(Math.min(Math.round(rating), 5))}{'☆'.repeat(Math.max(0, 5 - Math.min(Math.round(rating), 5)))}</span>
-            <span className="product-rating-value">{rating}</span>
+            <span className="product-rating-value">{rating.toFixed(1)}</span>
           </div>
         )}
         {originalPrice && (
@@ -52,7 +71,7 @@ const ProductCard = React.memo(function ProductCard({ id, name, image, price, ca
     prevProps.price === nextProps.price &&
     prevProps.discount === nextProps.discount &&
     prevProps.stock === nextProps.stock &&
-    prevProps.isOfficial === nextProps.isOfficial
+    prevProps.status === nextProps.status
   );
 });
 
@@ -88,14 +107,16 @@ const LazyImage = React.memo(({ src, alt, type, className, style }) => {
   const handleError = (e) => {
     if (!hasError) {
       setHasError(true);
-      // Use fallback based on type - pointing to storage folder
+      // Use fallback based on type - always from storage
       const fallbacks = {
-        product: '/storage/product/default.png',
-        banner: '/storage/banner/default.png',
-        avatar: '/storage/avatar/default.png',
-        promo: '/storage/promo/default.png',
-        voucher: '/storage/voucher/default.png',
-        default: '/storage/product/default.png'
+        product: '/storage/product/default.jpg',
+        banner: '/storage/banner/default.jpg',
+        avatar: '/storage/avatar/default.jpg',
+        promo: '/storage/promo/default.jpg',
+        voucher: '/storage/voucher/default.jpg',
+        game: '/storage/game/default.jpg',
+        category: '/storage/category/default.jpg',
+        default: '/storage/product/default.jpg'
       };
       setCurrentSrc(fallbacks[type] || fallbacks.default);
     } else {

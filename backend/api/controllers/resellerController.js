@@ -3,8 +3,9 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const { saveFile, deleteFile, STORAGE_BASE } = require('../helpers/storageHelper');
 const { Product, ProductCategory, ProductTag, ProductImage, Inventory, InventoryLog, SalesHistory, ProductView, Wishlist, SearchIndex, SellerStatistics, User, Order, Reseller } = require('../../models');
-const { cache } = require('../services/cacheService');
+const { cache, CACHE_KEYS } = require('../services/cacheService');
 const searchService = require('../services/searchService');
+const productScheduler = require('../services/productScheduler');
 
 // Sanitize input helper
 const sanitizeInput = (value) => {
@@ -299,7 +300,7 @@ const getResellerProductById = async (req, res) => {
   }
 };
 
-// Create reseller product
+// Create reseller product - with 30 second publish delay
 const createResellerProduct = async (req, res) => {
   try {
     const sellerId = req.user?.uid || req.user?.id;
@@ -374,7 +375,7 @@ const createResellerProduct = async (req, res) => {
     const category = await ProductCategory.findById(categoryId);
     const subCategory = subCategoryId ? await ProductCategory.findById(subCategoryId) : null;
     
-    // Create product
+    // Create product - save as draft initially, will be published after 30 seconds
     const product = new Product({
       name: sanitizeInput(name),
       slug: slug || generateProductSlug(name),
@@ -396,8 +397,8 @@ const createResellerProduct = async (req, res) => {
       sellerName: seller.fullName || 'Unknown Seller',
       storeName: seller.resellerInfo?.storeName || 'Toko Baru',
       tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(t => t.trim()) : []),
-      status: status || 'active',
-      publishedAt: status === 'active' ? new Date() : null
+      status: status || 'draft', // Save as draft, will be auto-published
+      publishedAt: null // Will be set when automatically published
     });
     
     await product.save();
@@ -410,22 +411,28 @@ const createResellerProduct = async (req, res) => {
       await createProductImages(product._id, req.files);
     }
     
-    // Index for search
-    await searchService.indexProduct(product._id);
+    // Schedule product for automatic publishing after 30 seconds
+    productScheduler.scheduleProductPublish(product._id, product);
     
     // Invalidate cache
     cache.invalidateSeller(sellerId);
+    cache.del(CACHE_KEYS.HOME_PRODUCTS);
     
     // Log security event
     req.logSecurity && req.logSecurity('PRODUCT_CREATED', {
       productId: product._id,
-      sellerId
+      sellerId,
+      scheduledForPublish: true
     });
     
     res.status(201).json({
       success: true,
-      message: 'Produk berhasil ditambahkan',
-      data: product
+      message: 'Produk berhasil ditambahkan dan akan dipublikasikan otomatis dalam 30 detik',
+      data: {
+        ...product.toObject(),
+        id: product._id,
+        status: 'scheduled' // Indicate it's scheduled, not yet published
+      }
     });
   } catch (error) {
     console.error('Create product error:', error);
@@ -541,6 +548,7 @@ const updateResellerProduct = async (req, res) => {
     // Invalidate cache
     cache.invalidateSeller(sellerId);
     cache.invalidateProduct(id);
+    cache.del(CACHE_KEYS.HOME_PRODUCTS);
     
     // Log security event
     req.logSecurity && req.logSecurity('PRODUCT_UPDATED', {
@@ -587,6 +595,9 @@ const deleteResellerProduct = async (req, res) => {
       });
     }
     
+    // Cancel any pending publication
+    productScheduler.cancelProductPublish(id);
+    
     // Soft delete
     product.deletedAt = new Date();
     product.deletedBy = sellerId;
@@ -598,6 +609,7 @@ const deleteResellerProduct = async (req, res) => {
     // Invalidate cache
     cache.invalidateSeller(sellerId);
     cache.invalidateProduct(id);
+    cache.del(CACHE_KEYS.HOME_PRODUCTS);
     
     // Log security event
     req.logSecurity && req.logSecurity('PRODUCT_DELETED', {
@@ -674,6 +686,7 @@ const updateStock = async (req, res) => {
     // Invalidate cache
     cache.invalidateSeller(sellerId);
     cache.invalidateProduct(id);
+    cache.del(CACHE_KEYS.HOME_PRODUCTS);
     
     // Log security event
     req.logSecurity && req.logSecurity('STOCK_UPDATED', {

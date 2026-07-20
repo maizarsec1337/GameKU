@@ -12,33 +12,68 @@ function Home() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   
-  // Data states
-  const [banners, setBanners] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [categoryProducts, setCategoryProducts] = useState({});
-  const [promos, setPromos] = useState([]);
-  
-  // Loading states
+  // Dynamic data state
+  const [homeData, setHomeData] = useState({ categories: [], sections: {}, banners: [], promos: [] });
   const [loading, setLoading] = useState(true);
   const [bannersLoading, setBannersLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [sectionsLoading, setSectionsLoading] = useState({});
   
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
   const carouselRefs = {
-    topup: React.useRef(null),
-    steam: React.useRef(null),
-    minecraft: React.useRef(null),
-    voucher: React.useRef(null),
-    giftcard: React.useRef(null),
-    promo: React.useRef(null),
     banner: React.useRef(null)
   };
 
-  // State for "Lihat Semua" (carousel <-> grid) per section
+  // State untuk mode "Lihat Semua" (carousel <-> grid) per section
   const [expandedSections, setExpandedSections] = useState({});
   const [closingSections, setClosingSections] = useState({});
+
+  // Polling interval for real-time updates (30 second refresh)
+  useEffect(() => {
+    const cacheKey = 'home';
+    
+    // Check cache first
+    const cached = dataCache.get(cacheKey);
+    if (cached && cached.categories) {
+      setHomeData(cached);
+      setLoading(false);
+      setBannersLoading(false);
+      setCategoriesLoading(false);
+    }
+
+    // Fetch fresh data
+    const fetchHomeData = async () => {
+      try {
+        const data = await apiService.get('/home', true);
+        if (data?.success && data.data) {
+          setHomeData(data.data);
+          dataCache.set(cacheKey, data.data);
+        }
+      } catch (error) {
+        console.error('Home data fetch error:', error);
+      } finally {
+        setLoading(false);
+        setBannersLoading(false);
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchHomeData();
+
+    // Set up polling every 30 seconds for new products
+    const pollInterval = setInterval(fetchHomeData, 30000);
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // Set loading state for sections when data is available
+  useEffect(() => {
+    const loadingState = {};
+    Object.keys(homeData.sections).forEach(key => {
+      loadingState[key] = false;
+    });
+    setSectionsLoading(loadingState);
+  }, [homeData.sections]);
 
   const toggleSection = useCallback((key) => {
     if (expandedSections[key]) {
@@ -63,20 +98,11 @@ function Home() {
   const scrollCarousel = useCallback((refName, direction) => {
     const ref = carouselRefs[refName];
     if (ref && ref.current) {
-      if (refName === 'banner') {
-        const slide = ref.current.querySelector('.banner-slide');
-        if (slide) {
-          const slideWidth = slide.offsetWidth;
-          const gap = 8;
-          ref.current.scrollBy({ left: direction * (slideWidth + gap), behavior: 'smooth' });
-        }
-      } else {
-        const card = ref.current.querySelector('.product-card');
-        if (card) {
-          const cardWidth = card.offsetWidth;
-          const gap = 8;
-          ref.current.scrollBy({ left: direction * (cardWidth + gap), behavior: 'smooth' });
-        }
+      const card = ref.current.querySelector('.product-card');
+      if (card) {
+        const cardWidth = card.offsetWidth;
+        const gap = 8;
+        ref.current.scrollBy({ left: direction * (cardWidth + gap), behavior: 'smooth' });
       }
     }
   }, []);
@@ -85,60 +111,6 @@ function Home() {
     await logout();
     navigate('/login');
   };
-
-  // Fetch home data with polling every 30 seconds
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      // Check cache first
-      const cachedHome = dataCache.get(CACHE_KEYS.HOME);
-      if (cachedHome?.success && cachedHome.data) {
-        const data = cachedHome.data;
-        setBanners(data.banners || []);
-        setCategories(data.categories || []);
-        setSections(data.sections || []);
-        setCategoryProducts(data.categoryProducts || {});
-        setPromos(data.promos || []);
-        setBannersLoading(false);
-        setCategoriesLoading(false);
-        setLoading(false);
-        
-        // Cache individual items for related components
-        dataCache.set(CACHE_KEYS.BANNERS, { success: true, data: data.banners || [] });
-        dataCache.set(CACHE_KEYS.CATEGORIES, { success: true, data: data.categories || [] });
-        dataCache.set(CACHE_KEYS.PROMOS, { success: true, data: data.promos || [] });
-      }
-
-      try {
-        const data = await apiService.get('/home');
-        if (data?.success && data.data) {
-          setBanners(data.data.banners || []);
-          setCategories(data.data.categories || []);
-          setSections(data.data.sections || []);
-          setCategoryProducts(data.data.categoryProducts || {});
-          setPromos(data.data.promos || []);
-          setBannersLoading(false);
-          setCategoriesLoading(false);
-          
-          // Cache individual items for related components
-          dataCache.set(CACHE_KEYS.BANNERS, { success: true, data: data.data.banners || [] });
-          dataCache.set(CACHE_KEYS.CATEGORIES, { success: true, data: data.data.categories || [] });
-          dataCache.set(CACHE_KEYS.PROMOS, { success: true, data: data.data.promos || [] });
-        }
-      } catch (error) {
-        console.error('Home data fetch error:', error);
-        setBannersLoading(false);
-        setCategoriesLoading(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHomeData();
-
-    // Poll every 30 seconds for updates
-    const pollInterval = setInterval(fetchHomeData, 30000);
-    return () => clearInterval(pollInterval);
-  }, []);
 
   // ====================
   // NAVBAR - Memoized
@@ -153,10 +125,19 @@ function Home() {
 
         <div className={`navbar-menu ${menuOpen ? 'active' : ''}`}>
           <Link to="/" className="active" onClick={closeMenu}>Beranda</Link>
-          <Link to="/category/topup" onClick={closeMenu}>Top Up</Link>
-          <Link to="/category/voucher" onClick={closeMenu}>Voucher</Link>
-          <Link to="/category/steam" onClick={closeMenu}>Steam</Link>
-          <Link to="/category/minecraft" onClick={closeMenu}>Minecraft</Link>
+          {homeData.categories.map((cat) => (
+            <Link key={cat._id || cat.id} to={`/category/${cat.slug}`} onClick={closeMenu}>
+              {cat.name}
+            </Link>
+          ))}
+          {homeData.categories.length === 0 && (
+            <>
+              <Link to="/category/topup" onClick={closeMenu}>Top Up</Link>
+              <Link to="/category/voucher" onClick={closeMenu}>Voucher</Link>
+              <Link to="/category/steam" onClick={closeMenu}>Steam</Link>
+              <Link to="/category/minecraft" onClick={closeMenu}>Minecraft</Link>
+            </>
+          )}
           <Link to="/promo" onClick={closeMenu}>Promo</Link>
           <Link to="/about" onClick={closeMenu}>Tentang</Link>
         </div>
@@ -165,7 +146,7 @@ function Home() {
           <button className="btn-icon" aria-label="Search" onClick={() => navigate('/search')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
-              <line x1="21" x2="16.65" y1="16.65" />
+              <line x1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
 
@@ -208,19 +189,19 @@ function Home() {
         </div>
       </div>
     </nav>
-  ), [menuOpen, user, navigate, toggleMenu, closeMenu, handleLogout]);
+  ), [menuOpen, user, navigate, toggleMenu, closeMenu, handleLogout, homeData.categories]);
 
   // ====================
   // BANNER AUTO SLIDE
   // ====================
   useEffect(() => {
-    if (banners.length > 1) {
+    if (homeData.banners && homeData.banners.length > 1) {
       const interval = setInterval(() => {
-        setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+        setCurrentBannerIndex((prev) => (prev + 1) % homeData.banners.length);
       }, 4000);
       return () => clearInterval(interval);
     }
-  }, [banners.length]);
+  }, [homeData.banners?.length]);
 
   // ====================
   // BANNER CAROUSEL
@@ -229,7 +210,7 @@ function Home() {
     <section className="banner-section">
       <div className="container">
         <div className="banner-carousel" ref={carouselRefs.banner}>
-          {banners.length > 0 ? (
+          {homeData.banners && homeData.banners.length > 0 ? (
             <>
               <div className="banner-slider" style={{
                 display: 'flex',
@@ -237,14 +218,14 @@ function Home() {
                 transition: 'transform 0.5s ease-in-out',
                 width: '100%'
               }}>
-                {banners.map((banner, index) => (
+                {homeData.banners.map((banner, index) => (
                   <div className="banner-slide" key={banner._id || banner.id || index}>
-                    <ImageWithFallback src={banner.image} alt={banner.alt || banner.title || 'Banner'} type="banner" />
+                    <ImageWithFallback src={banner.image || banner.src} alt={banner.alt || banner.title || 'Banner'} type="banner" />
                   </div>
                 ))}
               </div>
               <div className="banner-indicators">
-                {banners.map((_, index) => (
+                {homeData.banners.map((_, index) => (
                   <div
                     key={index}
                     className={`banner-indicator ${index === currentBannerIndex ? 'active' : ''}`}
@@ -256,12 +237,12 @@ function Home() {
           ) : bannersLoading ? (
             <SkeletonBanner count={1} />
           ) : (
-            <div style={{ height: '180px' }}></div> // Empty placeholder
+            <div style={{ height: '180px' }}></div>
           )}
         </div>
       </div>
     </section>
-  ), [banners, currentBannerIndex, bannersLoading]);
+  ), [homeData.banners, currentBannerIndex, bannersLoading]);
 
   // ====================
   // CATEGORY ICONS
@@ -270,8 +251,8 @@ function Home() {
     <section className="section-categories">
       <div className="container">
         <div className="categories-row">
-          {categories.length > 0 ? (
-            categories.map((cat, index) => (
+          {homeData.categories.length > 0 ? (
+            homeData.categories.map((cat, index) => (
               <Link to={`/category/${cat.slug}`} className="category-item" key={cat._id || cat.id || index}>
                 <div className="category-icon-wrapper">
                   <span className="category-emoji">{cat.icon || '🎮'}</span>
@@ -285,20 +266,22 @@ function Home() {
         </div>
       </div>
     </section>
-  ), [categories, categoriesLoading]);
+  ), [homeData.categories, categoriesLoading]);
 
   // ====================
-  // CAROUSEL SECTION
+  // DYNAMIC CAROUSEL SECTION
   // ====================
-  const CarouselSection = memo(({ title, subtitle, data, gridClassName, isExpanded, isClosing, onToggle, onScrollPrev, onScrollNext }) => {
+  const DynamicSection = memo(({ sectionKey, sectionData, onToggle, onScrollPrev, onScrollNext, isExpanded, isClosing }) => {
+    if (!sectionData || !sectionData.products || sectionData.products.length === 0) return null;
+    
     return (
       <section className="section">
         <div className="container">
           <div className="section-header">
             <div className="section-header-flex">
               <div className="section-title-wrapper">
-                <h2 className="section-title">{title}</h2>
-                {subtitle && <p className="section-subtitle">{subtitle}</p>}
+                <h2 className="section-title">{sectionData.title}</h2>
+                {sectionData.subtitle && <p className="section-subtitle">{sectionData.subtitle}</p>}
               </div>
               <button
                 type="button"
@@ -316,19 +299,26 @@ function Home() {
           </div>
 
           {isExpanded || isClosing ? (
-            <div className={`product-grid ${gridClassName} ${isClosing ? 'grid-closing' : 'grid-opening'}`} key={gridClassName}>
-              {data.length > 0 ? (
-                data.map((item) => (
+            <div className={`product-grid ${sectionKey} ${isClosing ? 'grid-closing' : 'grid-opening'}`} key={sectionKey}>
+              {sectionData.products.length > 0 ? (
+                sectionData.products.map((item) => (
                   <ProductCard
-                    key={item.id || item._id}
-                    id={item.id || item._id}
+                    key={item._id || item.id}
+                    id={item._id || item.id}
                     name={item.name}
                     image={item.image}
-                    price={item.price || 'Rp0'}
+                    price={item.price}
                     category={item.category}
-                    platform={item.category}
+                    platform={item.platform}
                     originalPrice={item.originalPrice}
                     discount={item.discount}
+                    rating={item.rating}
+                    sold={item.sold}
+                    stock={item.stock}
+                    status={item.status}
+                    sellerName={item.sellerName}
+                    storeName={item.storeName}
+                    isOfficial={item.isOfficial}
                   />
                 ))
               ) : null}
@@ -338,19 +328,26 @@ function Home() {
               <button className="carousel-btn carousel-prev" onClick={onScrollPrev}>
                 ‹
               </button>
-              <div className={`product-carousel ${gridClassName}`} ref={carouselRefs[gridClassName]}>
-                {data.length > 0 ? (
-                  data.map((item) => (
+              <div className={`product-carousel ${sectionKey}`} ref={carouselRefs[sectionKey]}>
+                {sectionData.products.length > 0 ? (
+                  sectionData.products.map((item) => (
                     <ProductCard
-                      key={item.id || item._id}
-                      id={item.id || item._id}
+                      key={item._id || item.id}
+                      id={item._id || item.id}
                       name={item.name}
                       image={item.image}
-                      price={item.price || 'Rp0'}
+                      price={item.price}
                       category={item.category}
-                      platform={item.category}
+                      platform={item.platform}
                       originalPrice={item.originalPrice}
                       discount={item.discount}
+                      rating={item.rating}
+                      sold={item.sold}
+                      stock={item.stock}
+                      status={item.status}
+                      sellerName={item.sellerName}
+                      storeName={item.storeName}
+                      isOfficial={item.isOfficial}
                     />
                   ))
                 ) : null}
@@ -366,117 +363,86 @@ function Home() {
   });
 
   // ====================
-  // DYNAMIC SECTIONS FROM CATEGORY PRODUCTS
+  // RENDER SECTIONS DYNAMICALLY
   // ====================
-  const renderDynamicSections = useMemo(() => {
-    // Define section order based on categoryProducts
-    const sectionOrder = ['topup', 'steam', 'minecraft', 'voucher', 'giftcard'];
-    
-    return sectionOrder.map((catType) => {
-      const products = categoryProducts[catType] || [];
-      if (products.length === 0 && !sections.find(s => s.type === catType)) return null;
-      
-      const sectionTitles = {
-        topup: { title: 'Top Up Games', subtitle: 'Produk Official GameKU - Mobile Legends, Free Fire, PUBG, Valorant, Roblox, Growtopia' },
-        steam: { title: 'Random Steam Key', subtitle: 'Produk dari Marketplace Seller - Steam Wallet & Game Key' },
-        minecraft: { title: 'Minecraft Marketplace', subtitle: 'Akun, Shared Account, Minecoin, Server, Jasa Build, Plugin, Resource Pack' },
-        voucher: { title: 'Voucher Game', subtitle: 'Voucher untuk berbagai platform game' },
-        giftcard: { title: 'Gift Card', subtitle: 'Gift card untuk hiburan digital' }
-      };
-      
-      const sec = sectionTitles[catType] || { title: catType, subtitle: '' };
-      
-      return (
-        <CarouselSection
-          key={catType}
-          title={sec.title}
-          subtitle={sec.subtitle}
-          data={products}
-          gridClassName={catType}
-          isExpanded={!!expandedSections[catType]}
-          isClosing={!!closingSections[catType]}
-          onToggle={() => toggleSection(catType)}
-          onScrollPrev={() => scrollCarousel(catType, -1)}
-          onScrollNext={() => scrollCarousel(catType, 1)}
-        />
-      );
-    });
-  }, [categoryProducts, sections, expandedSections, closingSections, toggleSection, scrollCarousel]);
-
-  // ====================
-  // SMART SECTIONS (Latest, Popular, Best Selling, Top Rated)
-  // ====================
-  const renderSmartSections = useMemo(() => {
-    return sections.map((section) => {
-      if (!section.products || section.products.length === 0) return null;
-      
-      return (
-        <CarouselSection
-          key={section.type}
-          title={section.title}
-          subtitle={section.subtitle}
-          data={section.products}
-          gridClassName={section.type}
-          isExpanded={!!expandedSections[section.type]}
-          isClosing={!!closingSections[section.type]}
-          onToggle={() => toggleSection(section.type)}
-          onScrollPrev={() => scrollCarousel(section.type, -1)}
-          onScrollNext={() => scrollCarousel(section.type, 1)}
-        />
-      );
-    });
-  }, [sections, expandedSections, closingSections, toggleSection, scrollCarousel]);
+  const renderSections = useMemo(() => {
+    return Object.entries(homeData.sections || {}).map(([sectionKey, sectionData]) => (
+      <DynamicSection
+        key={sectionKey}
+        sectionKey={sectionKey}
+        sectionData={sectionData}
+        isExpanded={!!expandedSections[sectionKey]}
+        isClosing={!!closingSections[sectionKey]}
+        onToggle={() => toggleSection(sectionKey)}
+        onScrollPrev={() => scrollCarousel(sectionKey, -1)}
+        onScrollNext={() => scrollCarousel(sectionKey, 1)}
+      />
+    ));
+  }, [homeData.sections, expandedSections, closingSections, toggleSection, scrollCarousel]);
 
   // ====================
   // PROMO SECTION
   // ====================
-  const renderPromoSection = useMemo(() => (
-    <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <div className="section-header-flex">
-            <div className="section-title-wrapper">
-              <h2 className="section-title">Promo Spesial</h2>
-              <p className="section-subtitle">Nikmati berbagai promo menarik dari GameKU</p>
-            </div>
-            <Link to="/promo" className="btn-view-all">
-              <span>Lihat Semua</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </Link>
-          </div>
-        </div>
+  const renderPromoSection = useMemo(() => {
+    const promoProducts = homeData.promos?.filter(p => p.products)?.flatMap(p => p.products) || [];
+    
+    if (promoProducts.length === 0) return null;
 
-        <div className="carousel-wrapper">
-          <button className="carousel-btn carousel-prev" onClick={() => scrollCarousel('promo', -1)}>
-            ‹
-          </button>
-          <div className="product-carousel promo" ref={carouselRefs.promo}>
-            {promos.length > 0 ? (
-              promos.map((item) => (
-                <ProductCard
-                  key={item.id || item._id}
-                  id={item.id || item._id}
-                  name={item.title || item.name}
-                  image={item.image}
-                  price={item.price || 'Rp0'}
-                  category={item.category}
-                  platform={item.category}
-                  originalPrice={item.originalPrice}
-                  discount={item.discount}
-                />
-              ))
-            ) : null}
+    return (
+      <section className="section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-header-flex">
+              <div className="section-title-wrapper">
+                <h2 className="section-title">Promo Spesial</h2>
+                <p className="section-subtitle">Nikmati berbagai promo menarik dari GameKU</p>
+              </div>
+              <Link to="/promo" className="btn-view-all">
+                <span>Lihat Semua</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
+            </div>
           </div>
-          <button className="carousel-btn carousel-next" onClick={() => scrollCarousel('promo', 1)}>
-            ›
-          </button>
+
+          <div className="carousel-wrapper">
+            <button className="carousel-btn carousel-prev" onClick={() => scrollCarousel('promo', -1)}>
+              ‹
+            </button>
+            <div className="product-carousel promo" ref={carouselRefs.promo}>
+              {promoProducts.length > 0 ? (
+                promoProducts.map((item) => (
+                  <ProductCard
+                    key={item._id || item.id}
+                    id={item._id || item.id}
+                    name={item.name}
+                    image={item.image}
+                    price={item.price}
+                    category={item.category}
+                    platform={item.platform}
+                    originalPrice={item.originalPrice}
+                    discount={item.discount}
+                    rating={item.rating}
+                    sold={item.sold}
+                    stock={item.stock}
+                    status={item.status}
+                    sellerName={item.sellerName}
+                    storeName={item.storeName}
+                    isOfficial={item.isOfficial}
+                  />
+                ))
+              ) : null}
+            </div>
+            <button className="carousel-btn carousel-next" onClick={() => scrollCarousel('promo', 1)}>
+              ›
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
-  ), [promos, scrollCarousel]);
+      </section>
+    );
+  }, [homeData.promos, scrollCarousel]);
 
   // ====================
   // FOOTER - Memoized
@@ -504,11 +470,21 @@ function Home() {
           <div>
             <h4>Produk</h4>
             <ul>
-              <li><Link to="/category/topup">Top Up Game</Link></li>
-              <li><Link to="/category/voucher">Voucher Game</Link></li>
-              <li><Link to="/category/steam">Steam Wallet</Link></li>
-              <li><Link to="/category/giftcard">Gift Card</Link></li>
-              <li><Link to="/category/minecraft">Minecraft</Link></li>
+              {homeData.categories.length > 0 ? (
+                homeData.categories.map((cat) => (
+                  <li key={cat._id || cat.id}>
+                    <Link to={`/category/${cat.slug}`}>{cat.name}</Link>
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li><Link to="/category/topup">Top Up Game</Link></li>
+                  <li><Link to="/category/voucher">Voucher Game</Link></li>
+                  <li><Link to="/category/steam">Steam Wallet</Link></li>
+                  <li><Link to="/category/giftcard">Gift Card</Link></li>
+                  <li><Link to="/category/minecraft">Minecraft</Link></li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -541,7 +517,7 @@ function Home() {
         </div>
       </div>
     </footer>
-  ), []);
+  ), [homeData.categories]);
 
   // ====================
   // RENDER
@@ -551,8 +527,7 @@ function Home() {
       {renderNavbar}
       {renderBanner}
       {renderCategories}
-      {renderSmartSections}
-      {renderDynamicSections}
+      {renderSections}
       {renderPromoSection}
       {renderFooter}
     </>

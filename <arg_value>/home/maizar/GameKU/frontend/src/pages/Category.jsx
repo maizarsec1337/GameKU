@@ -3,7 +3,6 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import ImageWithFallback from '../components/ImageWithFallback';
 import apiService from '../services/apiService';
-import { dataCache, CACHE_KEYS } from '../services/dataCache';
 import '../css/category.css';
 
 const ALPHABET = ['#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
@@ -19,83 +18,89 @@ function Category() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentCategory, setCurrentCategory] = useState(null);
 
-  // Fetch categories and products from API
+  // Fetch categories for sidebar
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      
+    const fetchCategories = async () => {
       try {
-        // Fetch categories for sidebar
-        const categoriesData = await apiService.get('/category');
-        if (categoriesData?.success && Array.isArray(categoriesData.data)) {
-          setCategories(categoriesData.data);
-        }
-
-        // Fetch products for current category
-        const productsData = await apiService.get(`/home/category/${activeSlug}`);
-        if (productsData?.success && Array.isArray(productsData.data)) {
-          setProducts(productsData.data);
+        const data = await apiService.get('/category');
+        if (data?.success) {
+          setCategories(data.data || []);
         }
       } catch (error) {
-        console.error('Category fetch error:', error);
+        console.error('Categories fetch error:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch products from database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const data = await apiService.get(`/home/category/${activeSlug}`);
+        if (data?.success) {
+          setProducts(data.data || []);
+          if (data.category) {
+            setCurrentCategory(data.category);
+          }
+        } else {
+          setProducts([]);
+          setCurrentCategory(null);
+        }
+      } catch (error) {
+        console.error('Products fetch error:', error);
+        setProducts([]);
+        setCurrentCategory(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchProducts();
+    setSearch('');
+    setActiveLetter('');
   }, [activeSlug]);
 
-  const currentMenu = categories.find((m) => m.slug === activeSlug) || { 
-    slug: activeSlug, 
-    name: activeSlug.charAt(0).toUpperCase() + activeSlug.slice(1), 
-    icon: '🎮' 
-  };
+  const currentMenu = currentCategory || categories.find((m) => m.slug === activeSlug) || { name: activeSlug };
 
   // Filter berdasarkan search + huruf
   const filtered = useMemo(() => {
-    if (!search && !activeLetter) return [];
-    
     return products.filter((g) => {
-      const matchSearch = search 
-        ? g.name?.toLowerCase().includes(search.trim().toLowerCase())
-        : true;
-      const firstChar = g.name?.charAt(0)?.toUpperCase() || '#';
-      const matchLetter = activeLetter 
-        ? (activeLetter === '#' ? !/^[A-Z]$/.test(firstChar) : firstChar === activeLetter)
-        : true;
+      const matchSearch = g.name?.toLowerCase().includes(search.trim().toLowerCase());
+      const firstChar = g.name?.charAt(0).toUpperCase() || '#';
+      const matchLetter = !activeLetter || activeLetter === '#'
+        ? !/^[A-Z]$/.test(firstChar)
+        : firstChar === activeLetter;
       return matchSearch && matchLetter;
     });
   }, [search, activeLetter, products]);
 
-  // Section konten kanan - dynamic sections
+  // Section konten kanan - dynamic based on product categories
   const sections = useMemo(() => {
-    if (search || activeLetter) return [];
+    // Group products by subcategory if available, otherwise by default grouping
+    const sortedProducts = [...products].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-    const productArray = Array.isArray(products) ? products : [];
     return [
       { 
         title: 'Produk Terbaru', 
         icon: '✨', 
-        items: productArray.slice(0, 8) 
+        items: sortedProducts.slice(0, 12) 
       },
       { 
         title: 'Produk Populer', 
         icon: '🔥', 
-        items: productArray.slice(8, 16) 
+        items: [...sortedProducts].sort((a, b) => (b.sold || 0) - (a.sold || 0)).slice(0, 12) 
       },
       { 
-        title: 'Produk Lainnya', 
+        title: 'Lainnya', 
         icon: '🗂️', 
-        items: productArray.slice(16) 
+        items: sortedProducts.slice(24) 
       }
     ];
-  }, [products, search, activeLetter]);
-
-  const handleGameClick = (id) => {
-    navigate(`/product/${id}`);
-  };
+  }, [products]);
 
   const handleSidebarClick = (s) => {
     setDrawerOpen(false);
@@ -152,25 +157,9 @@ function Category() {
                 </li>
               ))
             ) : (
-              // Fallback to basic categories if none loaded
-              [
-                { slug: 'topup', name: 'Top Up Game', icon: '🎮' },
-                { slug: 'voucher', name: 'Voucher', icon: '🎟️' },
-                { slug: 'steam', name: 'Steam', icon: '🪙' },
-                { slug: 'giftcard', name: 'Gift Card', icon: '🎁' },
-                { slug: 'minecraft', name: 'Minecraft', icon: '🧱' }
-              ].map((m) => (
-                <li key={m.slug}>
-                  <button
-                    type="button"
-                    className={`category-menu-item ${m.slug === activeSlug ? 'active' : ''}`}
-                    onClick={() => handleSidebarClick(m.slug)}
-                  >
-                    <span className="category-menu-icon">{m.icon}</span>
-                    <span className="category-menu-name">{m.name}</span>
-                  </button>
-                </li>
-              ))
+              <li>
+                <span className="category-menu-item">Memuat kategori...</span>
+              </li>
             )}
           </ul>
         </aside>
@@ -192,10 +181,10 @@ function Category() {
             <span className="category-search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Cari Layanan..."
+              placeholder="Cari Produk..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Cari Layanan"
+              aria-label="Cari Produk"
             />
           </div>
 
@@ -213,52 +202,77 @@ function Category() {
             ))}
           </div>
 
-          {/* Loading state */}
-          {loading && (
-            <div style={{ textAlign: 'center', padding: 'var(--space-lg)' }}>
-              Memuat produk...
-            </div>
-          )}
-
           {/* Hasil pencarian/filter huruf */}
-          {!loading && (search || activeLetter ? (
+          {search || activeLetter ? (
             <section className="category-section">
               <h2 className="category-section-title">
                 <span className="category-section-icon">🔎</span>
                 Hasil ({filtered.length})
               </h2>
               {filtered.length > 0 ? (
-                <div className="category-grid">
+                <div className="product-grid">
                   {filtered.map((g) => (
-                    <button key={g._id || g.id} type="button" className="game-item" onClick={() => handleGameClick(g._id || g.id)}>
-                      <ImageWithFallback src={g.image || '/storage/product/default.png'} alt={g.name} className="game-item-icon" />
-                      <span className="game-item-name">{g.name}</span>
-                    </button>
+                    <ProductCard
+                      key={g._id || g.id}
+                      id={g._id || g.id}
+                      name={g.name}
+                      image={g.image}
+                      price={g.price}
+                      category={g.category}
+                      platform={g.platform}
+                      originalPrice={g.originalPrice}
+                      discount={g.discount}
+                      rating={g.rating}
+                      sold={g.sold}
+                      stock={g.stock}
+                      status={g.status}
+                      sellerName={g.sellerName}
+                      storeName={g.storeName}
+                      isOfficial={g.isOfficial}
+                    />
                   ))}
                 </div>
               ) : (
-                <p className="category-empty">Tidak ada layanan yang cocok.</p>
+                <p className="category-empty">Tidak ada produk yang cocok.</p>
               )}
             </section>
           ) : (
             /* Section default */
-            sections.map((sec, idx) => sec.items.length > 0 ? (
+            sections.map((sec, idx) => sec.items && sec.items.length > 0 ? (
               <section className="category-section" key={sec.title}>
                 <h2 className="category-section-title">
                   <span className="category-section-icon">{sec.icon}</span>
                   {sec.title}
                 </h2>
-                <div className="category-grid">
+                <div className="product-grid">
                   {sec.items.map((g) => (
-                    <button key={g._id || g.id} type="button" className="game-item" onClick={() => handleGameClick(g._id || g.id)}>
-                      <ImageWithFallback src={g.image || '/storage/product/default.png'} alt={g.name} className="game-item-icon" />
-                      <span className="game-item-name">{g.name}</span>
-                    </button>
+                    <ProductCard
+                      key={g._id || g.id}
+                      id={g._id || g.id}
+                      name={g.name}
+                      image={g.image}
+                      price={g.price}
+                      category={g.category}
+                      platform={g.platform}
+                      originalPrice={g.originalPrice}
+                      discount={g.discount}
+                      rating={g.rating}
+                      sold={g.sold}
+                      stock={g.stock}
+                      status={g.status}
+                      sellerName={g.sellerName}
+                      storeName={g.storeName}
+                      isOfficial={g.isOfficial}
+                    />
                   ))}
                 </div>
               </section>
             ) : null)
-          ))}
+          )}
+
+          {!loading && products.length === 0 && !search && !activeLetter && (
+            <p className="category-empty">Belum ada produk dalam kategori ini.</p>
+          )}
         </main>
       </div>
     </>

@@ -45,6 +45,7 @@ try {
 
 // Cache keys - optimized for frontend requests
 const CACHE_KEYS = {
+  HOME: 'home',
   BANNERS: 'banners',
   CATEGORIES: 'categories',
   TOPUP_PRODUCTS: 'topup_products',
