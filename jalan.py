@@ -1143,7 +1143,7 @@ def install_perbaiki_dependency() -> None:
 
 
 def push_github() -> None:
-    """Push project ke GitHub"""
+    """Push project ke GitHub dengan validasi remote"""
     warna_hijau = "\033[38;2;100;255;150m"
     warna_merah = "\033[38;2;255;100;100m"
     warna_kuning = "\033[38;2;255;255;100m"
@@ -1157,12 +1157,76 @@ def push_github() -> None:
         print(f"{warna_merah}Git tidak terpasang. Tidak dapat melakukan push ke GitHub.{ANSI_RESET}")
         return
     
-    # Cek apakah folder .git ada
+    # Cek apakah folder .git ada, jika belum jalankan git init
     if not (PROJECT_ROOT / ".git").exists():
-        print(f"{warna_merah}Folder .git tidak ditemukan. Project belum diinisialisasi sebagai repository Git.{ANSI_RESET}")
+        print(f"{warna_kuning}Folder .git tidak ditemukan. Menginisialisasi repository Git...{ANSI_RESET}")
+        try:
+            hasil_init = subprocess.run(
+                ["git", "init"],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if hasil_init.returncode != 0:
+                print(f"{warna_merah}Gagal menginisialisasi Git: {hasil_init.stderr}{ANSI_RESET}")
+                return
+            print(f"{warna_hijau}Repository Git berhasil diinisialisasi.{ANSI_RESET}")
+        except Exception as e:
+            print(f"{warna_merah}Gagal menginisialisasi Git: {e}{ANSI_RESET}")
+            return
+    
+    # Remote yang diharapkan
+    remote_yang_diharapkan = "git@github.com:maizarsec1337/GameKU.git"
+    
+    # Periksa apakah remote origin ada
+    try:
+        hasil_remote = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if hasil_remote.returncode != 0:
+            # Remote origin tidak ada, tambahkan
+            print(f"{warna_kuning}Menambahkan remote origin...{ANSI_RESET}")
+            hasil_add_remote = subprocess.run(
+                ["git", "remote", "add", "origin", remote_yang_diharapkan],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if hasil_add_remote.returncode != 0:
+                print(f"{warna_merah}Gagal menambahkan remote origin: {hasil_add_remote.stderr}{ANSI_RESET}")
+                return
+            print(f"{warna_hijau}Remote origin berhasil ditambahkan.{ANSI_RESET}")
+        else:
+            # Remote origin ada, periksa URL
+            remote_url = hasil_remote.stdout.strip()
+            if remote_url != remote_yang_diharapkan:
+                print(f"{warna_kuning}URL remote berbeda. Mengupdate ke URL yang benar...{ANSI_RESET}")
+                hasil_set_remote = subprocess.run(
+                    ["git", "remote", "set-url", "origin", remote_yang_diharapkan],
+                    cwd=PROJECT_ROOT,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                if hasil_set_remote.returncode != 0:
+                    print(f"{warna_merah}Gagal mengupdate remote origin: {hasil_set_remote.stderr}{ANSI_RESET}")
+                    return
+                print(f"{warna_hijau}Remote origin berhasil diupdate.{ANSI_RESET}")
+            else:
+                print(f"{warna_hijau}Remote GitHub sudah dikonfigurasi.{ANSI_RESET}")
+    except Exception as e:
+        print(f"{warna_merah}Gagal memeriksa remote Git: {e}{ANSI_RESET}")
         return
     
     # Minta deskripsi commit
+    print()
     print("Masukkan deskripsi commit:")
     deskripsi = input("> ").strip()
     
@@ -1197,7 +1261,8 @@ def push_github() -> None:
         if hasil_commit.returncode != 0:
             error_msg = hasil_commit.stderr.lower() if hasil_commit.stderr else ""
             if "nothing to commit" in error_msg or "no changes" in error_msg:
-                print(f"{warna_kuning}Tidak ada perubahan untuk di-commit.{ANSI_RESET}")
+                print(f"{warna_kuning}Tidak ada perubahan yang perlu dikirim.{ANSI_RESET}")
+                return
             else:
                 print(f"{warna_merah}Gagal menjalankan git commit: {hasil_commit.stderr}{ANSI_RESET}")
                 return
