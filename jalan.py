@@ -1142,6 +1142,40 @@ def install_perbaiki_dependency() -> None:
         print(f"{warna_hijau}✓ Dependency root     : Sudah Terpasang{ANSI_RESET}")
 
 
+def cek_remote_origin() -> tuple:
+    """Memeriksa apakah remote origin sudah ada"""
+    try:
+        hasil = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if hasil.returncode == 0:
+            return True, hasil.stdout.strip()
+        return False, None
+    except Exception:
+        return False, None
+
+
+def dapatkan_branch_aktif() -> str:
+    """Mendapatkan branch aktif saat ini"""
+    try:
+        hasil = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if hasil.returncode == 0 and hasil.stdout.strip():
+            return hasil.stdout.strip()
+        return "main"  # Default ke main jika tidak bisa dideteksi
+    except Exception:
+        return "main"
+
+
 def push_github() -> None:
     """Push project ke GitHub"""
     warna_hijau = "\033[38;2;100;255;150m"
@@ -1151,13 +1185,13 @@ def push_github() -> None:
     print(f"{warna_hijau}Push Project ke GitHub{ANSI_RESET}")
     print()
     
-    # Cek apakah git terpasang
+    # 1. Periksa apakah git terpasang
     git_terpasang, _ = cek_git()
     if not git_terpasang:
         print(f"{warna_merah}Git tidak terpasang. Tidak dapat melakukan push ke GitHub.{ANSI_RESET}")
         return
     
-    # 1. Pastikan direktori merupakan repository Git
+    # 2. Periksa apakah repository Git ada
     if not (PROJECT_ROOT / ".git").exists():
         print(f"{warna_kuning}Folder .git tidak ditemukan. Menginisialisasi repository Git...{ANSI_RESET}")
         try:
@@ -1176,53 +1210,70 @@ def push_github() -> None:
             print(f"{warna_merah}Gagal menginisialisasi Git: {e}{ANSI_RESET}")
             return
     
-    # 2. Konfigurasi remote origin
     remote_yang_diharapkan = "git@github.com:maizarsec1337/GameKU.git"
     
-    try:
-        hasil_remote = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if hasil_remote.returncode != 0:
-            print(f"{warna_kuning}Menambahkan remote origin...{ANSI_RESET}")
-            hasil_add_remote = subprocess.run(
+    # 3. Periksa apakah remote origin ada
+    origin_ada, remote_url = cek_remote_origin()
+    
+    if not origin_ada:
+        # Jika origin belum ada, tambahkan remote origin
+        print(f"{warna_kuning}Menambahkan remote origin...{ANSI_RESET}")
+        try:
+            hasil_add = subprocess.run(
                 ["git", "remote", "add", "origin", remote_yang_diharapkan],
                 cwd=PROJECT_ROOT,
                 capture_output=True,
                 text=True,
                 timeout=60
             )
-            if hasil_add_remote.returncode != 0:
-                print(f"{warna_merah}Gagal menambahkan remote origin: {hasil_add_remote.stderr}{ANSI_RESET}")
+            if hasil_add.returncode != 0:
+                print(f"{warna_merah}Gagal menambahkan remote origin: {hasil_add.stderr}{ANSI_RESET}")
                 return
             print(f"{warna_hijau}Remote origin berhasil ditambahkan.{ANSI_RESET}")
+            print(f"{warna_hijau}Remote GitHub terdeteksi.{ANSI_RESET}")
+        except Exception as e:
+            print(f"{warna_merah}Gagal menambahkan remote origin: {e}{ANSI_RESET}")
+            return
+    else:
+        # 4. Jika origin sudah ada, periksa URL
+        if remote_url == remote_yang_diharapkan:
+            print(f"{warna_hijau}Remote GitHub terdeteksi.{ANSI_RESET}")
         else:
-            remote_url = hasil_remote.stdout.strip()
-            if remote_url != remote_yang_diharapkan:
-                print(f"{warna_kuning}URL remote berbeda. Mengupdate ke URL yang benar...{ANSI_RESET}")
-                hasil_set_remote = subprocess.run(
-                    ["git", "remote", "set-url", "origin", remote_yang_diharapkan],
-                    cwd=PROJECT_ROOT,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
-                if hasil_set_remote.returncode != 0:
-                    print(f"{warna_merah}Gagal mengupdate remote origin: {hasil_set_remote.stderr}{ANSI_RESET}")
-                    return
-                print(f"{warna_hijau}Remote origin berhasil diupdate.{ANSI_RESET}")
-            else:
-                print(f"{warna_hijau}Remote GitHub sudah dikonfigurasi.{ANSI_RESET}")
-    except Exception as e:
-        print(f"{warna_merah}Gagal memeriksa remote Git: {e}{ANSI_RESET}")
-        return
+            # 5. Jika URL berbeda, tanyakan pengguna
+            print(f"{warna_kuning}URL remote saat ini: {remote_url}{ANSI_RESET}")
+            print(f"{warna_kuning}URL yang diharapkan: {remote_yang_diharapkan}{ANSI_RESET}")
+            print()
+            print("Apakah Anda ingin mengganti remote origin?")
+            print("[Y] Ya")
+            print("[N] Tidak (lanjutkan dengan remote yang ada)")
+            print()
+            
+            while True:
+                pilihan = input("Pilihan Anda: ").strip().upper()
+                if pilihan == 'Y':
+                    try:
+                        hasil_set = subprocess.run(
+                            ["git", "remote", "set-url", "origin", remote_yang_diharapkan],
+                            cwd=PROJECT_ROOT,
+                            capture_output=True,
+                            text=True,
+                            timeout=60
+                        )
+                        if hasil_set.returncode != 0:
+                            print(f"{warna_merah}Gagal mengganti remote origin: {hasil_set.stderr}{ANSI_RESET}")
+                            return
+                        print(f"{warna_hijau}Remote origin berhasil diupdate.{ANSI_RESET}")
+                    except Exception as e:
+                        print(f"{warna_merah}Gagal mengganti remote origin: {e}{ANSI_RESET}")
+                        return
+                    break
+                elif pilihan == 'N':
+                    print(f"{warna_kuning}Menggunakan remote yang ada.{ANSI_RESET}")
+                    break
+                else:
+                    print("Masukkan Y atau N!")
     
-    # 3. Periksa user.name Git
+    # 6. Periksa user.name Git
     try:
         hasil_name = subprocess.run(
             ["git", "config", "--global", "user.name"],
@@ -1257,7 +1308,7 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek user.name Git: {e}{ANSI_RESET}")
         return
     
-    # 4. Periksa user.email Git
+    # 7. Periksa user.email Git
     try:
         hasil_email = subprocess.run(
             ["git", "config", "--global", "user.email"],
@@ -1292,7 +1343,7 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek user.email Git: {e}{ANSI_RESET}")
         return
     
-    # 5. Periksa apakah ada perubahan menggunakan git status --porcelain
+    # 8. Periksa apakah ada perubahan menggunakan git status --porcelain
     print()
     print(f"{warna_kuning}Memeriksa status perubahan...{ANSI_RESET}")
     try:
@@ -1341,7 +1392,7 @@ def push_github() -> None:
             if not deskripsi:
                 deskripsi = "Update project"
             
-            # 6. Jalankan git commit
+            # 9. Jalankan git commit
             print()
             print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
             try:
@@ -1376,19 +1427,44 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek status Git: {e}{ANSI_RESET}")
         return
     
-    # 7. Jalankan git push langsung
+    # 10. Ambil branch aktif
+    branch_aktif = dapatkan_branch_aktif()
     print()
-    print(f"{warna_kuning}Menjalankan: git push{ANSI_RESET}")
+    print(f"{warna_kuning}Branch aktif: {branch_aktif}{ANSI_RESET}")
+    
+    # 11. Cek apakah upstream sudah ada
+    try:
+        hasil_upstream = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "@{upstream}"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        upstream_ada = hasil_upstream.returncode == 0 and hasil_upstream.stdout.strip()
+    except Exception:
+        upstream_ada = False
+    
+    # 12. Jalankan git push dengan atau tanpa -u flag
+    print()
+    if upstream_ada:
+        print(f"{warna_kuning}Menjalankan: git push origin {branch_aktif}{ANSI_RESET}")
+        perintah_push = ["git", "push", "origin", branch_aktif]
+    else:
+        print(f"{warna_kuning}Menjalankan: git push -u origin {branch_aktif}{ANSI_RESET}")
+        perintah_push = ["git", "push", "-u", "origin", branch_aktif]
+    
     try:
         hasil_push = subprocess.run(
-            ["git", "push"],
+            perintah_push,
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
             timeout=120
         )
         
-        # Tampilkan output stdout dan stderr
+        # 13. Tampilkan stdout, stderr, dan exit code
         output_parts = []
         if hasil_push.stdout:
             output_parts.append(hasil_push.stdout)
@@ -1402,12 +1478,15 @@ def push_github() -> None:
             return
         
         print(f"{warna_hijau}Project berhasil dikirim ke GitHub.{ANSI_RESET}")
+        if output_parts:
+            print("\n".join(output_parts))
     except subprocess.TimeoutExpired:
         print(f"{warna_merah}Timeout: Proses git push terlalu lama.{ANSI_RESET}")
         return
     except Exception as e:
         print(f"{warna_merah}Gagal menjalankan git push: {e}{ANSI_RESET}")
         return
+
 
 
 def bersihkan_cache_lengkap() -> None:
