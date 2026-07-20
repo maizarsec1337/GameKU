@@ -1292,26 +1292,9 @@ def push_github() -> None:
         print(f"{warna_merah}Gagal mengecek user.email Git: {e}{ANSI_RESET}")
         return
     
-    # 5. Jalankan git add .
+    # 5. Periksa apakah ada perubahan menggunakan git status --porcelain
     print()
-    print(f"{warna_kuning}Menjalankan: git add .{ANSI_RESET}")
-    try:
-        hasil_add = subprocess.run(
-            ["git", "add", "."],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        
-        if hasil_add.returncode != 0:
-            print(f"{warna_merah}Gagal menjalankan git add: {hasil_add.stderr}{ANSI_RESET}")
-            return
-    except Exception as e:
-        print(f"{warna_merah}Gagal menjalankan git add: {e}{ANSI_RESET}")
-        return
-    
-    # 6. Periksa apakah ada perubahan menggunakan git status --porcelain
+    print(f"{warna_kuning}Memeriksa status perubahan...{ANSI_RESET}")
     try:
         hasil_status = subprocess.run(
             ["git", "status", "--porcelain"],
@@ -1325,56 +1308,111 @@ def push_github() -> None:
             print(f"{warna_merah}Gagal mengecek status Git: {hasil_status.stderr}{ANSI_RESET}")
             return
         
-        if not hasil_status.stdout.strip():
-            print(f"{warna_kuning}Tidak ada perubahan yang perlu dikirim ke GitHub.{ANSI_RESET}")
-            return
-        
-        # Hitung jumlah baris yang berubah
-        changed_lines = hasil_status.stdout.strip().split("\n") if hasil_status.stdout.strip() else []
-        print(f"{warna_hijau}Ditemukan {len(changed_lines)} file yang berubah.{ANSI_RESET}")
+        ada_perubahan = hasil_status.stdout.strip()
+        if ada_perubahan:
+            # Hitung jumlah file yang berubah
+            changed_lines = ada_perubahan.split("\n")
+            print(f"{warna_hijau}Ditemukan {len(changed_lines)} file yang berubah.{ANSI_RESET}")
+            
+            # Jalankan git add .
+            print()
+            print(f"{warna_kuning}Menjalankan: git add .{ANSI_RESET}")
+            try:
+                hasil_add = subprocess.run(
+                    ["git", "add", "."],
+                    cwd=PROJECT_ROOT,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                
+                if hasil_add.returncode != 0:
+                    print(f"{warna_merah}Gagal menjalankan git add: {hasil_add.stderr}{ANSI_RESET}")
+                    return
+            except Exception as e:
+                print(f"{warna_merah}Gagal menjalankan git add: {e}{ANSI_RESET}")
+                return
+            
+            # Minta deskripsi commit
+            print()
+            print("Masukkan deskripsi commit:")
+            deskripsi = input("> ").strip()
+            
+            if not deskripsi:
+                deskripsi = "Update project"
+            
+            # 6. Jalankan git commit
+            print()
+            print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
+            try:
+                hasil_commit = subprocess.run(
+                    ["git", "commit", "-m", deskripsi],
+                    cwd=PROJECT_ROOT,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                
+                if hasil_commit.returncode != 0:
+                    # Tampilkan seluruh output stderr dan stdout
+                    error_output = []
+                    if hasil_commit.stderr:
+                        error_output.append(hasil_commit.stderr)
+                    if hasil_commit.stdout:
+                        error_output.append(hasil_commit.stdout)
+                    
+                    error_msg = "\n".join(error_output) if error_output else "Tidak diketahui"
+                    print(f"{warna_merah}Gagal menjalankan git commit:{ANSI_RESET}")
+                    print(error_msg)
+                    return
+                
+                print(f"{warna_hijau}Commit berhasil dibuat.{ANSI_RESET}")
+            except Exception as e:
+                print(f"{warna_merah}Gagal menjalankan git commit: {e}{ANSI_RESET}")
+                return
+        else:
+            print(f"{warna_kuning}Working tree bersih - tidak ada perubahan yang akan di-commit.{ANSI_RESET}")
     except Exception as e:
         print(f"{warna_merah}Gagal mengecek status Git: {e}{ANSI_RESET}")
         return
     
-    # Minta deskripsi commit
+    # 7. Periksa apakah ada commit lokal yang belum dipush
     print()
-    print("Masukkan deskripsi commit:")
-    deskripsi = input("> ").strip()
-    
-    if not deskripsi:
-        deskripsi = "Update project"
-    
-    # 8. Jalankan git commit
-    print()
-    print(f"{warna_kuning}Menjalankan: git commit -m \"{deskripsi}\"{ANSI_RESET}")
+    print(f"{warna_kuning}Memeriksa commit yang belum dipush...{ANSI_RESET}")
     try:
-        hasil_commit = subprocess.run(
-            ["git", "commit", "-m", deskripsi],
+        # Cek apakah branch lokal ada di remote
+        hasil_rev = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=30
         )
         
-        if hasil_commit.returncode != 0:
-            # Tampilkan seluruh output stderr dan stdout
-            error_output = []
-            if hasil_commit.stderr:
-                error_output.append(hasil_commit.stderr)
-            if hasil_commit.stdout:
-                error_output.append(hasil_commit.stdout)
-            
-            error_msg = "\n".join(error_output) if error_output else "Tidak diketahui"
-            print(f"{warna_merah}Gagal menjalankan git commit:{ANSI_RESET}")
-            print(error_msg)
+        if hasil_rev.returncode != 0:
+            print(f"{warna_merah}Gagal mengecek commit lokal: {hasil_rev.stderr}{ANSI_RESET}")
             return
         
-        print(f"{warna_hijau}Commit berhasil dibuat.{ANSI_RESET}")
+        # Cek apakah ada commit di remote
+        hasil_remote_rev = subprocess.run(
+            ["git", "rev-list", "--count", "@{u}"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        commit_lokal = int(hasil_rev.stdout.strip()) if hasil_rev.stdout.strip() else 0
+        commit_remote = int(hasil_remote_rev.stdout.strip()) if hasil_remote_rev.returncode == 0 and hasil_remote_rev.stdout.strip() else 0
+        
+        if commit_lokal <= commit_remote:
+            print(f"{warna_hijau}Project sudah sinkron dengan GitHub. Tidak ada perubahan yang perlu dikirim.{ANSI_RESET}")
+            return
     except Exception as e:
-        print(f"{warna_merah}Gagal menjalankan git commit: {e}{ANSI_RESET}")
-        return
+        print(f"{warna_merah}Gagal mengecek status remote: {e}{ANSI_RESET}")
+        # Lanjutkan ke push saja jika gagal cek
     
-    # 10. Jalankan git push
+    # 8. Jalankan git push
     print()
     print(f"{warna_kuning}Menjalankan: git push{ANSI_RESET}")
     try:
